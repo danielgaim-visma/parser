@@ -1,24 +1,33 @@
 import sys
 import os
 import logging
-from PyQt5.QtWidgets import QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, QLabel, QLineEdit, QPushButton, QCheckBox, QFileDialog, QMessageBox, QProgressBar
-from PyQt5.QtCore import Qt, QThread, pyqtSignal, PYQT_VERSION_STR
+from PyQt5.QtWidgets import QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, QLabel, QLineEdit, \
+    QPushButton, QCheckBox, QFileDialog, QMessageBox, QProgressBar
+from PyQt5.QtCore import Qt, QThread, pyqtSignal, QObject, pyqtSlot, QT_VERSION_STR, PYQT_VERSION_STR
 from importlib import import_module
 
 # Set up logging
-logging.basicConfig(filename='docx_parser_gui.log', level=logging.DEBUG,
+log_file = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'docx_parser_gui.log')
+logging.basicConfig(filename=log_file, level=logging.DEBUG,
                     format='%(asctime)s - %(levelname)s - %(message)s')
+
+
+def exception_hook(exc_type, exc_value, exc_traceback):
+    logging.error("Uncaught exception", exc_info=(exc_type, exc_value, exc_traceback))
+    sys.__excepthook__(exc_type, exc_value, exc_traceback)
+
+
+sys.excepthook = exception_hook
+
 
 # Function to check and log system information
 def log_system_info():
     logging.info(f"Python version: {sys.version}")
-    logging.info(f"PyQt5 version: {PYQT_VERSION_STR}")
+    logging.info(f"PyQt version: {PYQT_VERSION_STR}")
+    logging.info(f"Qt version: {QT_VERSION_STR}")
     logging.info(f"Operating System: {os.name}")
     logging.info(f"Current working directory: {os.getcwd()}")
-    print(f"Python version: {sys.version}")
-    print(f"PyQt5 version: {PYQT_VERSION_STR}")
-    print(f"Operating System: {os.name}")
-    print(f"Current working directory: {os.getcwd()}")
+
 
 log_system_info()
 
@@ -34,6 +43,13 @@ except ImportError as e:
     logging.error(f"Error importing from docx_parser_functions: {e}")
     print(f"Error importing from docx_parser_functions: {e}")
     sys.exit(1)
+
+
+class SecureCodingDelegate(QObject):
+    @pyqtSlot(bool)
+    def applicationSupportsSecureRestorableState_(self, app):
+        return True
+
 
 class WorkerThread(QThread):
     finished = pyqtSignal(str)
@@ -61,13 +77,15 @@ class WorkerThread(QThread):
                     return
 
             if self.create_summary:
-                create_word_count_summary([os.path.basename(self.file_path)], output_folder, self.min_count, self.max_count)
+                create_word_count_summary([os.path.basename(self.file_path)], output_folder, self.min_count,
+                                          self.max_count)
                 logging.info("Word count summary created successfully")
 
             self.finished.emit(f"Processing complete. Output saved in {output_folder}")
         except Exception as e:
             self.error.emit(f"An error occurred: {str(e)}")
             logging.exception("Error during processing")
+
 
 class DocxParserGUI(QMainWindow):
     def __init__(self):
@@ -165,11 +183,23 @@ class DocxParserGUI(QMainWindow):
         self.process_button.setEnabled(True)
         QMessageBox.warning(self, "Error", error_message)
 
+
 def main():
     app = QApplication(sys.argv)
+
+    # Create and set the secure coding delegate
+    delegate = SecureCodingDelegate()
+    app.setProperty("NSApplicationDelegate", delegate)
+
     ex = DocxParserGUI()
     ex.show()
     sys.exit(app.exec_())
 
+
 if __name__ == '__main__':
-    main()
+    try:
+        main()
+    except Exception as e:
+        logging.exception("Unhandled exception in main")
+        print(f"An unhandled exception occurred: {e}")
+        sys.exit(1)
