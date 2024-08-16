@@ -1,78 +1,116 @@
 body {
     font-family: Arial, sans-serif;
-    max-width: 800px;
-    margin: 0 auto;
-    padding: 20px;
-    background-color: #f0f0f0;
+    background-color: #1a2a3a;
+    color: #ffffff;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+}
+
+.container {
+    background-color: #2c3e50;
+    padding: 2rem;
+    border-radius: 8px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    width: 100%;
+    max-width: 600px;
 }
 
 h1 {
     text-align: center;
-    color: #333;
+    color: #ecf0f1;
+    margin-bottom: 2rem;
+}
+
+.upload-section, .options-section, .button-group {
+    margin-bottom: 1.5rem;
+}
+
+input[type="file"] {
+    width: 100%;
+    padding: 0.5rem;
+    background-color: #34495e;
+    color: #ecf0f1;
+    border: none;
+    border-radius: 4px;
 }
 
 #file-list {
-    margin-bottom: 20px;
+    margin-top: 0.5rem;
+    font-size: 0.9rem;
 }
 
-.checkbox-group, .select-group, .number-inputs {
-    margin-bottom: 15px;
+.option {
+    margin-bottom: 1rem;
 }
 
 label {
     display: inline-block;
-    margin-right: 10px;
+    margin-bottom: 0.3rem;
 }
 
 input[type="checkbox"] {
-    margin-right: 5px;
+    margin-right: 0.5rem;
 }
 
 select, input[type="number"] {
-    padding: 5px;
-    border: 1px solid #ccc;
-    border-radius: 3px;
+    width: 100%;
+    padding: 0.5rem;
+    background-color: #34495e;
+    color: #ecf0f1;
+    border: none;
+    border-radius: 4px;
 }
 
 .button-group {
-    text-align: center;
-    margin-top: 20px;
+    display: flex;
+    justify-content: space-between;
 }
 
 button {
-    padding: 10px 20px;
-    margin: 0 10px;
-    background-color: #4CAF50;
-    color: white;
+    padding: 0.7rem 1.5rem;
+    background-color: #3498db;
+    color: #ffffff;
     border: none;
-    border-radius: 5px;
+    border-radius: 4px;
     cursor: pointer;
-    transition: background-color 0.3s;
+    transition: background-color 0.3s ease;
 }
 
 button:hover {
-    background-color: #45a049;
+    background-color: #2980b9;
 }
 
 #clear-btn {
-    background-color: #f44336;
+    background-color: #e74c3c;
 }
 
 #clear-btn:hover {
-    background-color: #d32f2f;
+    background-color: #c0392b;
 }
 
 .loading {
     text-align: center;
     font-style: italic;
-    color: #666;
-    margin-top: 20px;
+    color: #bdc3c7;
+    margin-top: 1rem;
+    display: none;
 }
 
 #result {
-    margin-top: 20px;
-    padding: 10px;
-    background-color: #fff;
-    border: 1px solid #ddd;
-    border-radius: 5px;
+    margin-top: 1rem;
+    padding: 1rem;
+    background-color: #34495e;
+    border-radius: 4px;
+}
+
+/* Responsive adjustments */
+@media (max-width: 650px) {
+    .container {
+        width: 90%;
+        padding: 1rem;
+    }
 }

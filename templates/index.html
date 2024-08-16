@@ -7,46 +7,54 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
 </head>
 <body>
-    <h1>DOCX Parser</h1>
+    <div class="container">
+        <h1>DOCX Parser</h1>
 
-    <div id="file-list"></div>
+        <div class="upload-section">
+            <input type="file" id="file-input" accept=".docx" multiple>
+            <div id="file-list"></div>
+        </div>
 
-    <input type="file" id="file-input" accept=".docx" multiple>
+        <div class="options-section">
+            <div class="option">
+                <input type="checkbox" id="parse-doc" checked>
+                <label for="parse-doc">Analyser dokumenter</label>
+            </div>
 
-    <div class="checkbox-group">
-        <input type="checkbox" id="parse-doc" checked>
-        <label for="parse-doc">Analyser dokumenter</label>
+            <div class="option">
+                <label for="parse-level">Analyser opp til overskriftsnivå:</label>
+                <select id="parse-level">
+                    <option value="1">Overskrift 1</option>
+                    <option value="2">Overskrift 2</option>
+                    <option value="3">Overskrift 3</option>
+                </select>
+            </div>
+
+            <div class="option">
+                <input type="checkbox" id="create-summary" checked>
+                <label for="create-summary">Lag ordtellingssammendrag</label>
+            </div>
+
+            <div class="option">
+                <label for="min-count">Min. ordtelling:</label>
+                <input type="number" id="min-count" value="5" min="1">
+            </div>
+
+            <div class="option">
+                <label for="max-count">Maks. ordtelling:</label>
+                <input type="number" id="max-count" value="80" min="1">
+            </div>
+        </div>
+
+        <div class="button-group">
+            <button id="process-btn">Behandle</button>
+            <button id="clear-btn">Tøm</button>
+        </div>
+
+        <div id="loading" class="loading">Behandler...</div>
+
+        <div id="result"></div>
     </div>
-
-    <div class="select-group">
-        <label for="parse-level">Analyser opp til overskriftsnivå:</label>
-        <select id="parse-level">
-            <option value="1">Overskrift 1</option>
-            <option value="2">Overskrift 2</option>
-            <option value="3">Overskrift 3</option>
-        </select>
-    </div>
-
-    <div class="checkbox-group">
-        <input type="checkbox" id="create-summary" checked>
-        <label for="create-summary">Lag ordtellingssammendrag</label>
-    </div>
-
-    <div class="number-inputs">
-        <label for="min-count">Min. ordtelling:</label>
-        <input type="number" id="min-count" value="5" min="1">
-        <label for="max-count">Maks. ordtelling:</label>
-        <input type="number" id="max-count" value="80" min="1">
-    </div>
-
-    <div class="button-group">
-        <button id="process-btn">Behandle</button>
-        <button id="clear-btn">Tøm</button>
-    </div>
-
-    <div class="loading" id="loading" style="display: none;">Behandler...</div>
-
-    <div id="result"></div>
 
     <script src="{{ url_for('static', filename='script.js') }}"></script>
 </body>
