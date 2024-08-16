@@ -94,9 +94,12 @@ def upload_file():
     if create_summary:
         app.logger.info("Creating word count summary")
         summary_file = create_word_count_summary(filenames, batch_folder, min_count, max_count)
-        summary_filename = os.path.basename(summary_file)
-        results.append({'summary_file': summary_filename})
-        app.logger.info(f"Summary file saved: {summary_file}")
+        if summary_file:
+            summary_filename = os.path.basename(summary_file)
+            results.append({'summary_file': summary_filename})
+            app.logger.info(f"Summary file saved: {summary_file}")
+        else:
+            app.logger.warning("No word count summary created (no words matched the criteria)")
 
     app.logger.info(f"Processing complete. Results: {results}")
     return jsonify({'results': results, 'batch_id': batch_id})

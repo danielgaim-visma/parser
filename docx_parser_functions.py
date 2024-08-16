@@ -1,9 +1,10 @@
 # docx_parser_functions.py
 
 import docx
-from collections import defaultdict
+from collections import defaultdict, Counter
 import os
 import re
+
 
 def parse_docx(file_path, output_folder):
     doc = docx.Document(file_path)
@@ -54,9 +55,31 @@ def parse_docx(file_path, output_folder):
 
     return doc_folder
 
+
 def sanitize_filename(filename):
     return re.sub(r'[^\w\-_\. ]', '_', filename)
 
+
 def create_word_count_summary(filenames, output_folder, min_count, max_count):
-    # Implementation remains the same
-    pass
+    word_count = Counter()
+    for filename in filenames:
+        file_path = os.path.join(output_folder, filename)
+        if os.path.exists(file_path):
+            doc = docx.Document(file_path)
+            for para in doc.paragraphs:
+                words = para.text.lower().split()
+                word_count.update(words)
+
+    filtered_words = [word for word, count in word_count.items() if min_count <= count <= max_count]
+
+    if not filtered_words:
+        return None  # Return None if no words match the criteria
+
+    summary_filename = f"word_count_summary_{min_count}_to_{max_count}.txt"
+    summary_path = os.path.join(output_folder, summary_filename)
+
+    with open(summary_path, 'w', encoding='utf-8') as f:
+        for word in sorted(filtered_words):
+            f.write(f"{word}: {word_count[word]}\n")
+
+    return summary_path
