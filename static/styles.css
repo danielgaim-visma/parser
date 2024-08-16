@@ -19,10 +19,19 @@ body {
     max-width: 600px;
 }
 
+.logo {
+    display: block;
+    margin: 0 auto 2rem;
+    max-width: 200px;
+    height: auto;
+}
+
 h1 {
     text-align: center;
     color: #ecf0f1;
+    margin-top: 0;
     margin-bottom: 2rem;
+    font-size: 1.8rem;
 }
 
 .upload-section, .options-section, .button-group {
@@ -36,6 +45,7 @@ input[type="file"] {
     color: #ecf0f1;
     border: none;
     border-radius: 4px;
+    cursor: pointer;
 }
 
 #file-list {
@@ -112,5 +122,17 @@ button:hover {
     .container {
         width: 90%;
         padding: 1rem;
+    }
+
+    .logo {
+        max-width: 150px;
+    }
+
+    h1 {
+        font-size: 1.5rem;
+    }
+
+    button {
+        padding: 0.6rem 1.2rem;
     }
 }
