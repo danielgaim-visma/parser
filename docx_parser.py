@@ -26,9 +26,9 @@ def parse_docx(file_path):
             current_heading2 = paragraph.text
             print(f"Found Heading 2: {current_heading2}")
         elif current_heading2 is not None:
-            content[current_heading1][current_heading2].append(paragraph.text)
+            content[current_heading1][current_heading2].append(paragraph)
         elif current_heading1 != "No Heading 1":
-            content[current_heading1]["_intro"].append(paragraph.text)
+            content[current_heading1]["_intro"].append(paragraph)
 
     print(f"Parsed content structure:")
     for h1, h2_content in content.items():
@@ -63,17 +63,19 @@ def save_parsed_content(parsed_content, output_folder, original_filename):
 
         for heading2, paragraphs in heading2_content.items():
             if heading2 == "_intro":
-                file_name = f"{base_name}_intro.txt"
+                file_name = f"{base_name}_intro.docx"
             else:
-                file_name = f"{base_name}_{sanitize_filename(heading2)}.txt"
+                file_name = f"{base_name}_{sanitize_filename(heading2)}.docx"
 
             output_file = os.path.join(heading1_folder, file_name)
 
-            with open(output_file, 'w', encoding='utf-8') as f:
-                if heading2 != "_intro":
-                    f.write(f"Heading 2: {heading2}\n\n")
-                for paragraph in paragraphs:
-                    f.write(f"{paragraph}\n")
+            doc = docx.Document()
+            if heading2 != "_intro":
+                doc.add_heading(heading2, level=2)
+            for paragraph in paragraphs:
+                doc.add_paragraph(paragraph.text, style=paragraph.style)
+
+            doc.save(output_file)
 
     return output_folder
 
