@@ -1,0 +1,100 @@
+<!-- templates/index.html -->
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DOCX Parser</title>
+    <style>
+        body { font-family: Arial, sans-serif; max-width: 800px; margin: 0 auto; padding: 20px; }
+        form { display: flex; flex-direction: column; gap: 10px; }
+        button { cursor: pointer; }
+        #file-list { margin-top: 10px; }
+        #file-list div { margin-bottom: 5px; }
+        .button-group { display: flex; gap: 10px; }
+    </style>
+</head>
+<body>
+    <h1>DOCX Parser</h1>
+    <form id="parser-form">
+        <input type="file" name="files[]" accept=".docx" multiple required>
+        <div id="file-list"></div>
+        <label><input type="checkbox" name="parse_doc" checked> Parse documents</label>
+        <label><input type="checkbox" name="create_summary"> Create word count summary</label>
+        <div>
+            <label>Min word count: <input type="number" name="min_count" value="5"></label>
+            <label>Max word count: <input type="number" name="max_count" value="80"></label>
+        </div>
+        <div class="button-group">
+            <button type="submit">Process</button>
+            <button type="button" id="clear-button">Clear</button>
+        </div>
+    </form>
+    <div id="result"></div>
+
+    <script>
+        document.querySelector('input[type="file"]').addEventListener('change', function(e) {
+            var fileList = document.getElementById('file-list');
+            fileList.innerHTML = '';
+            for (var i = 0; i < this.files.length; i++) {
+                fileList.innerHTML += '<div>' + this.files[i].name + '</div>';
+            }
+        });
+
+        document.getElementById('parser-form').addEventListener('submit', function(e) {
+            e.preventDefault();
+            var formData = new FormData(this);
+
+            // Ensure boolean values are correctly sent
+            formData.set('parse_doc', document.querySelector('input[name="parse_doc"]').checked);
+            formData.set('create_summary', document.querySelector('input[name="create_summary"]').checked);
+
+            fetch('/upload', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                var resultDiv = document.getElementById('result');
+                resultDiv.innerHTML = '<h2>Results:</h2>';
+                if (data.error) {
+                    resultDiv.innerHTML += '<p>Error: ' + data.error + '</p>';
+                } else {
+                    resultDiv.innerHTML += '<p>Processed files:</p><ul>';
+                    data.results.forEach(function(result) {
+                        if (result.filename) {
+                            resultDiv.innerHTML += '<li>' + result.filename + '</li>';
+                        }
+                        if (result.summary_file) {
+                            resultDiv.innerHTML += '<li>Word count summary: ' + result.summary_file + '</li>';
+                        }
+                    });
+                    resultDiv.innerHTML += '</ul>';
+                    resultDiv.innerHTML += '<p><a href="/download/' + data.batch_id + '" target="_blank">Download all files (ZIP)</a></p>';
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+            });
+        });
+
+        document.getElementById('clear-button').addEventListener('click', function() {
+            fetch('/clear', { method: 'POST' })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.error) {
+                        console.error('Error:', data.error);
+                    } else {
+                        document.getElementById('parser-form').reset();
+                        document.getElementById('file-list').innerHTML = '';
+                        document.getElementById('result').innerHTML = '';
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                });
+        });
+    </script>
+</body>
+</html>
