@@ -120,15 +120,15 @@ def count_words_in_docx(file_path):
     return words
 
 
-def create_word_count_summary(docx_files, output_folder):
+def create_word_count_summary(docx_files, output_folder, min_count, max_count):
     word_count = Counter()
     for file in docx_files:
         file_path = os.path.join(BASE_PATH, file)
         words = count_words_in_docx(file_path)
         word_count.update(words)
 
-    common_words = [word for word, count in word_count.items() if count > 20]
-    common_words.sort()
+    filtered_words = [word for word, count in word_count.items() if min_count <= count <= max_count]
+    filtered_words.sort()
 
     wb = Workbook()
     ws = wb.active
@@ -137,13 +137,27 @@ def create_word_count_summary(docx_files, output_folder):
     ws['A1'] = "Word"
     ws['B1'] = "Count"
 
-    for row, word in enumerate(common_words, start=2):
+    for row, word in enumerate(filtered_words, start=2):
         ws.cell(row=row, column=1, value=word)
         ws.cell(row=row, column=2, value=word_count[word])
 
-    summary_file = os.path.join(output_folder, "word_count_summary.xlsx")
+    summary_file = os.path.join(output_folder, f"word_count_summary_{min_count}_to_{max_count}.xlsx")
     wb.save(summary_file)
     print(f"Word count summary saved to: {summary_file}")
+
+
+def get_word_count_range():
+    while True:
+        try:
+            min_count = int(input("Enter the minimum word count (default is 5): ") or "5")
+            max_count = int(input("Enter the maximum word count (default is 80): ") or "80")
+            if min_count > 0 and max_count >= min_count:
+                return min_count, max_count
+            else:
+                print(
+                    "Invalid range. Minimum count should be positive and maximum count should be greater than or equal to minimum count.")
+        except ValueError:
+            print("Please enter valid numbers.")
 
 
 def select_features():
@@ -195,7 +209,8 @@ def main():
                                 print(f"    {len(paragraphs)} paragraphs")
 
         if 2 in selected_features:  # Create word count summary
-            create_word_count_summary(selected_files, output_folder)
+            min_count, max_count = get_word_count_range()
+            create_word_count_summary(selected_files, output_folder, min_count, max_count)
 
     except Exception as e:
         print(f"An error occurred while processing the file(s): {e}")
