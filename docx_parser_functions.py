@@ -41,10 +41,12 @@ def tag_document(doc_path, keywords):
         tags = [keyword for keyword in keywords if keyword in text]
 
         if tags:
-            core_properties = doc.core_properties
-            existing_keywords = core_properties.keywords or ""
-            new_keywords = ", ".join(set(existing_keywords.split(", ") + tags))
-            core_properties.keywords = new_keywords
+            # Add a new paragraph for tags
+            doc.add_paragraph()  # Add an empty paragraph for spacing
+            tag_paragraph = doc.add_paragraph("Tags:")
+            for tag in tags:
+                tag_paragraph.add_run(f" tag {tag}")
+
             doc.save(doc_path)
 
         return tags
@@ -182,6 +184,9 @@ def sanitize_filename(filename):
     # Remove invalid characters and limit length
     sanitized = re.sub(r'[^\w\-_\. ]', '_', filename)
     return sanitized[:255]  # Limit to 255 characters
+
+
+# ... (create_word_count_summary function remains unchanged)
 
 
 def create_word_count_summary(doc_paths, output_folder, min_count=20, max_count=100):
