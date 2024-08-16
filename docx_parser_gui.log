@@ -1,0 +1,76 @@
+2024-08-16 17:55:37,604 - INFO - Python version: 3.9.6 (default, Feb  3 2024, 15:58:27) 
+[Clang 15.0.0 (clang-1500.3.9.4)]
+2024-08-16 17:55:37,604 - INFO - Tkinter version: 8.5
+2024-08-16 17:55:37,604 - INFO - Operating System: posix
+2024-08-16 17:55:37,604 - INFO - Current working directory: /Users/daniel.gaimvisma.com/PycharmProjects/parsefiles
+2024-08-16 17:55:37,672 - INFO - Successfully imported functions from docx_parser_functions
+2024-08-16 17:55:37,747 - INFO - GUI widgets created successfully
+2024-08-16 17:55:37,747 - INFO - GUI initialized successfully
+2024-08-16 17:55:52,904 - INFO - Python version: 3.9.6 (default, Feb  3 2024, 15:58:27) 
+[Clang 15.0.0 (clang-1500.3.9.4)]
+2024-08-16 17:55:52,904 - INFO - Tkinter version: 8.5
+2024-08-16 17:55:52,904 - INFO - Operating System: posix
+2024-08-16 17:55:52,904 - INFO - Current working directory: /Users/daniel.gaimvisma.com/PycharmProjects/parsefiles
+2024-08-16 17:55:52,973 - INFO - Successfully imported functions from docx_parser_functions
+2024-08-16 17:55:53,044 - INFO - GUI widgets created successfully
+2024-08-16 17:55:53,044 - INFO - GUI initialized successfully
+2024-08-16 18:17:02,918 - INFO - Python version: 3.9.6 (default, Feb  3 2024, 15:58:27) 
+[Clang 15.0.0 (clang-1500.3.9.4)]
+2024-08-16 18:17:02,918 - INFO - Tkinter version: 8.5
+2024-08-16 18:17:02,918 - INFO - Operating System: posix
+2024-08-16 18:17:02,918 - INFO - Current working directory: /Users/daniel.gaimvisma.com/PycharmProjects/parsefiles
+2024-08-16 18:17:02,975 - INFO - Successfully imported functions from docx_parser_functions
+2024-08-16 18:17:03,051 - INFO - GUI widgets created successfully
+2024-08-16 18:17:03,051 - INFO - GUI initialized successfully
+2024-08-16 18:20:27,273 - INFO - Python version: 3.9.6 (default, Feb  3 2024, 15:58:27) 
+[Clang 15.0.0 (clang-1500.3.9.4)]
+2024-08-16 18:20:27,273 - INFO - Tkinter version: 8.5
+2024-08-16 18:20:27,273 - INFO - Operating System: posix
+2024-08-16 18:20:27,273 - INFO - Current working directory: /Users/daniel.gaimvisma.com/PycharmProjects/parsefiles
+2024-08-16 18:20:27,331 - INFO - Successfully imported functions from docx_parser_functions
+2024-08-16 18:20:27,405 - INFO - GUI widgets created successfully
+2024-08-16 18:20:27,405 - INFO - GUI initialized successfully
+2024-08-16 18:24:09,611 - INFO - Python version: 3.9.6 (default, Feb  3 2024, 15:58:27) 
+[Clang 15.0.0 (clang-1500.3.9.4)]
+2024-08-16 18:24:09,611 - INFO - Tkinter version: 8.5
+2024-08-16 18:24:09,611 - INFO - Operating System: posix
+2024-08-16 18:24:09,611 - INFO - Current working directory: /Users/daniel.gaimvisma.com/PycharmProjects/parsefiles
+2024-08-16 18:24:09,672 - INFO - Successfully imported functions from docx_parser_functions
+2024-08-16 18:24:09,744 - INFO - GUI widgets created successfully
+2024-08-16 18:24:09,744 - INFO - GUI initialized successfully
+2024-08-16 18:25:23,336 - INFO - Python version: 3.9.6 (default, Feb  3 2024, 15:58:27) 
+[Clang 15.0.0 (clang-1500.3.9.4)]
+2024-08-16 18:25:23,336 - INFO - Tkinter version: 8.5
+2024-08-16 18:25:23,336 - INFO - Operating System: posix
+2024-08-16 18:25:23,336 - INFO - Current working directory: /Users/daniel.gaimvisma.com/PycharmProjects/parsefiles
+2024-08-16 18:25:23,394 - INFO - Successfully imported functions from docx_parser_functions
+2024-08-16 18:25:23,467 - INFO - GUI widgets created successfully
+2024-08-16 18:25:23,467 - INFO - GUI initialized successfully
+2024-08-16 18:27:40,588 - INFO - Python version: 3.9.6 (default, Feb  3 2024, 15:58:27) 
+[Clang 15.0.0 (clang-1500.3.9.4)]
+2024-08-16 18:32:59,648 - INFO - Python version: 3.9.6 (default, Feb  3 2024, 15:58:27) 
+[Clang 15.0.0 (clang-1500.3.9.4)]
+2024-08-16 18:32:59,648 - INFO - PyQt5 version: 5.15.11
+2024-08-16 18:32:59,648 - INFO - Operating System: posix
+2024-08-16 18:32:59,648 - INFO - Current working directory: /Users/daniel.gaimvisma.com/PycharmProjects/parsefiles
+2024-08-16 18:32:59,711 - INFO - Successfully imported functions from docx_parser_functions
+2024-08-16 18:33:12,316 - INFO - Selected file: /Users/daniel.gaimvisma.com/PycharmProjects/parsefiles/old_files/(Flyt AI) 0_GENERELL DEL- GDPR INFORMASJONSSKRIV_23.docx
+2024-08-16 18:33:18,530 - INFO - Created output folder: /Users/daniel.gaimvisma.com/PycharmProjects/parsefiles/parsed_output/parsed_files_20240816_183318
+2024-08-16 18:33:18,583 - INFO - Document parsed successfully
+2024-08-16 18:33:18,601 - INFO - Word count summary created successfully
+2024-08-16 19:07:18,743 - INFO - Python version: 3.9.6 (default, Feb  3 2024, 15:58:27) 
+[Clang 15.0.0 (clang-1500.3.9.4)]
+2024-08-16 19:07:18,744 - ERROR - Uncaught exception
+Traceback (most recent call last):
+  File "/Users/daniel.gaimvisma.com/PycharmProjects/parsefiles/docx_parser_gui.py", line 31, in <module>
+    log_system_info()
+  File "/Users/daniel.gaimvisma.com/PycharmProjects/parsefiles/docx_parser_gui.py", line 26, in log_system_info
+    logging.info(f"PyQt version: {Qt.qVersion()}")
+AttributeError: type object 'Qt' has no attribute 'qVersion'
+2024-08-16 19:08:55,587 - INFO - Python version: 3.9.6 (default, Feb  3 2024, 15:58:27) 
+[Clang 15.0.0 (clang-1500.3.9.4)]
+2024-08-16 19:08:55,587 - INFO - PyQt version: 5.15.11
+2024-08-16 19:08:55,587 - INFO - Qt version: 5.15.14
+2024-08-16 19:08:55,587 - INFO - Operating System: posix
+2024-08-16 19:08:55,587 - INFO - Current working directory: /Users/daniel.gaimvisma.com/PycharmProjects/parsefiles
+2024-08-16 19:08:55,784 - INFO - Successfully imported functions from docx_parser_functions
