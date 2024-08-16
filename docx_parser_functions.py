@@ -4,13 +4,56 @@ import os
 import re
 import logging
 from openpyxl import Workbook
+import csv
 
 # Set up logging
 logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
 
 
-def parse_docx(file_path, output_folder, parse_level):
+def read_keywords(reference_file):
+    keywords = []
+    file_extension = os.path.splitext(reference_file)[1].lower()
+
+    try:
+        if file_extension == '.csv':
+            with open(reference_file, 'r', encoding='utf-8') as file:
+                reader = csv.reader(file)
+                keywords = [row[0].strip().lower() for row in reader if row]
+        elif file_extension == '.txt':
+            with open(reference_file, 'r', encoding='utf-8') as file:
+                keywords = [line.strip().lower() for line in file if line.strip()]
+        else:
+            logger.error(f"Unsupported file format for reference file: {file_extension}")
+            return []
+    except Exception as e:
+        logger.error(f"Error reading reference file: {str(e)}")
+        return []
+
+    return keywords
+
+
+def tag_document(doc_path, keywords):
+    try:
+        doc = docx.Document(doc_path)
+        text = " ".join([para.text.lower() for para in doc.paragraphs])
+
+        tags = [keyword for keyword in keywords if keyword in text]
+
+        if tags:
+            core_properties = doc.core_properties
+            existing_keywords = core_properties.keywords or ""
+            new_keywords = ", ".join(set(existing_keywords.split(", ") + tags))
+            core_properties.keywords = new_keywords
+            doc.save(doc_path)
+
+        return tags
+    except Exception as e:
+        logger.error(f"Error tagging document {doc_path}: {str(e)}")
+        return []
+
+
+def parse_docx(file_path, output_folder, parse_level, keywords):
     logger.info(f"Parsing document: {file_path}")
     try:
         doc = docx.Document(file_path)
@@ -64,6 +107,8 @@ def parse_docx(file_path, output_folder, parse_level):
             file_name = f"{sanitize_filename(h1)}.docx"
             full_path = os.path.join(doc_folder, file_name)
             save_docx(full_path, h1, "", "", h2_dict[""][""], 1)
+            tags = tag_document(full_path, keywords)
+            logger.info(f"Tagged document {full_path} with tags: {tags}")
         else:
             for h2, h3_dict in h2_dict.items():
                 if h2:
@@ -74,17 +119,22 @@ def parse_docx(file_path, output_folder, parse_level):
                         file_name = f"{sanitize_filename(h2)}.docx"
                         full_path = os.path.join(h1_folder, file_name)
                         save_docx(full_path, h1, h2, "", h3_dict[""], 2)
+                        tags = tag_document(full_path, keywords)
+                        logger.info(f"Tagged document {full_path} with tags: {tags}")
                     elif parse_level == 3:
                         for h3, paragraphs in h3_dict.items():
                             if h3:
                                 file_name = f"{sanitize_filename(h3)}.docx"
                                 full_path = os.path.join(h2_folder, file_name)
                                 save_docx(full_path, h1, h2, h3, paragraphs, 3)
+                                tags = tag_document(full_path, keywords)
+                                logger.info(f"Tagged document {full_path} with tags: {tags}")
                             else:
-                                # Handle content directly under H2 when parse_level is 3
                                 file_name = f"{sanitize_filename(h2)}_content.docx"
                                 full_path = os.path.join(h2_folder, file_name)
                                 save_docx(full_path, h1, h2, "", paragraphs, 2)
+                                tags = tag_document(full_path, keywords)
+                                logger.info(f"Tagged document {full_path} with tags: {tags}")
 
     logger.info(f"Parsing complete. Output folder: {doc_folder}")
     return doc_folder

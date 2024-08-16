@@ -13,8 +13,16 @@
         <h1>DOCX Parser</h1>
 
         <div class="upload-section">
+            <h2>Last opp dokumenter</h2>
             <input type="file" id="file-input" accept=".docx" multiple>
             <div id="file-list"></div>
+        </div>
+
+        <div class="upload-section">
+            <h2>Last opp referansefil</h2>
+            <input type="file" id="reference-file-input" accept=".csv,.txt">
+            <p class="info">Støttede formater: CSV, TXT</p>
+            <div id="reference-file-name"></div>
         </div>
 
         <div class="options-section">
@@ -39,12 +47,12 @@
 
             <div class="option">
                 <label for="min-count">Min. ordtelling:</label>
-                <input type="number" id="min-count" value="5" min="1">
+                <input type="number" id="min-count" value="20" min="1">
             </div>
 
             <div class="option">
                 <label for="max-count">Maks. ordtelling:</label>
-                <input type="number" id="max-count" value="80" min="1">
+                <input type="number" id="max-count" value="100" min="1">
             </div>
         </div>
 

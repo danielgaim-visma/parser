@@ -2,7 +2,7 @@ from flask import Flask, render_template, request, jsonify, send_file
 import os
 import logging
 from werkzeug.utils import secure_filename
-from docx_parser_functions import parse_docx, create_word_count_summary
+from docx_parser_functions import parse_docx, create_word_count_summary, read_keywords
 import uuid
 import zipfile
 import io
@@ -12,7 +12,7 @@ app = Flask(__name__)
 # Configuration
 UPLOAD_FOLDER = 'uploads'
 RESULTS_FOLDER = 'results'
-ALLOWED_EXTENSIONS = {'docx'}
+ALLOWED_EXTENSIONS = {'docx', 'csv', 'txt'}
 
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 app.config['RESULTS_FOLDER'] = RESULTS_FOLDER
@@ -53,6 +53,11 @@ def upload_file():
             logger.error("No selected files")
             return jsonify({'error': 'No selected files'}), 400
 
+        reference_file = request.files.get('reference_file')
+        if not reference_file or reference_file.filename == '':
+            logger.error("No reference file selected")
+            return jsonify({'error': 'No reference file selected'}), 400
+
         batch_id = str(uuid.uuid4())
         batch_folder = os.path.join(app.config['RESULTS_FOLDER'], batch_id)
         os.makedirs(batch_folder, exist_ok=True)
@@ -69,6 +74,13 @@ def upload_file():
             f"min_count: {min_count}, max_count: {max_count}, parse_level: {parse_level}"
         )
 
+        # Save and process reference file
+        reference_filename = secure_filename(reference_file.filename)
+        reference_path = os.path.join(batch_folder, reference_filename)
+        reference_file.save(reference_path)
+        keywords = read_keywords(reference_path)
+        logger.info(f"Read {len(keywords)} keywords from reference file")
+
         results = []
         doc_paths = []
 
@@ -84,7 +96,7 @@ def upload_file():
                 result = {'filename': filename}
                 if parse_doc:
                     logger.info(f"Parsing document: {filename}")
-                    doc_folder = parse_docx(upload_path, batch_folder, parse_level)
+                    doc_folder = parse_docx(upload_path, batch_folder, parse_level, keywords)
                     result['doc_folder'] = os.path.relpath(doc_folder, batch_folder)
                     logger.info(f"Document parsed and saved in: {doc_folder}")
 

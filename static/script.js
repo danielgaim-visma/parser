@@ -1,12 +1,15 @@
 document.addEventListener('DOMContentLoaded', function() {
     const fileInput = document.getElementById('file-input');
     const fileList = document.getElementById('file-list');
+    const referenceFileInput = document.getElementById('reference-file-input');
+    const referenceFileName = document.getElementById('reference-file-name');
     const processBtn = document.getElementById('process-btn');
     const clearBtn = document.getElementById('clear-btn');
     const loadingDiv = document.getElementById('loading');
     const resultDiv = document.getElementById('result');
 
     fileInput.addEventListener('change', updateFileList);
+    referenceFileInput.addEventListener('change', updateReferenceFileName);
     processBtn.addEventListener('click', processFiles);
     clearBtn.addEventListener('click', clearFiles);
 
@@ -19,10 +22,23 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
 
+    function updateReferenceFileName() {
+        if (referenceFileInput.files.length > 0) {
+            referenceFileName.textContent = `Valgt referansefil: ${referenceFileInput.files[0].name}`;
+        } else {
+            referenceFileName.textContent = '';
+        }
+    }
+
     function processFiles() {
         const files = fileInput.files;
+        const referenceFile = referenceFileInput.files[0];
         if (files.length === 0) {
             alert('Vennligst velg minst én fil.');
+            return;
+        }
+        if (!referenceFile) {
+            alert('Vennligst velg en referansefil.');
             return;
         }
 
@@ -30,6 +46,7 @@ document.addEventListener('DOMContentLoaded', function() {
         for (let file of files) {
             formData.append('files[]', file);
         }
+        formData.append('reference_file', referenceFile);
         formData.append('parse_doc', document.getElementById('parse-doc').checked);
         formData.append('create_summary', document.getElementById('create-summary').checked);
         formData.append('min_count', document.getElementById('min-count').value);
@@ -84,6 +101,8 @@ document.addEventListener('DOMContentLoaded', function() {
     function clearFiles() {
         fileInput.value = '';
         fileList.innerHTML = '';
+        referenceFileInput.value = '';
+        referenceFileName.textContent = '';
         resultDiv.innerHTML = '';
 
         fetch('/clear', {
