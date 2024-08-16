@@ -1,213 +1,54 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="no">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>DOCX Parser</title>
-    <style>
-        :root {
-            --navy-blue: #00004d;
-            --iceberg: #74b3ce;
-            --light-iceberg: #a7d3e6;
-            --dark-iceberg: #5a8fa6;
-        }
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            max-width: 800px;
-            margin: 0 auto;
-            padding: 40px 20px;
-            background-color: var(--navy-blue);
-            color: white;
-            line-height: 1.6;
-        }
-        h1, h2 {
-            color: var(--iceberg);
-            text-align: center;
-            margin-bottom: 30px;
-        }
-        form {
-            display: flex;
-            flex-direction: column;
-            gap: 20px;
-            background-color: rgba(116, 179, 206, 0.1);
-            padding: 30px;
-            border-radius: 15px;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-        }
-        button {
-            cursor: pointer;
-            background-color: var(--iceberg);
-            color: var(--navy-blue);
-            border: none;
-            padding: 12px 20px;
-            border-radius: 5px;
-            font-weight: bold;
-            transition: background-color 0.3s ease;
-        }
-        button:hover {
-            background-color: var(--light-iceberg);
-        }
-        input[type="file"], input[type="number"] {
-            background-color: white;
-            color: var(--navy-blue);
-            border: 2px solid var(--iceberg);
-            padding: 8px;
-            border-radius: 5px;
-            width: 100%;
-            box-sizing: border-box;
-        }
-        input[type="checkbox"] {
-            accent-color: var(--iceberg);
-        }
-        label {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
-        #file-list {
-            margin-top: 10px;
-            color: var(--light-iceberg);
-        }
-        #file-list div {
-            margin-bottom: 5px;
-            padding: 5px;
-            background-color: rgba(116, 179, 206, 0.2);
-            border-radius: 3px;
-        }
-        .button-group {
-            display: flex;
-            gap: 15px;
-            justify-content: center;
-        }
-        a {
-            color: var(--light-iceberg);
-            text-decoration: none;
-            transition: color 0.3s ease;
-        }
-        a:hover {
-            color: white;
-            text-decoration: underline;
-        }
-        #result {
-            margin-top: 30px;
-            background-color: rgba(116, 179, 206, 0.1);
-            padding: 25px;
-            border-radius: 15px;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-        }
-        .number-inputs {
-            display: flex;
-            gap: 15px;
-        }
-        .number-inputs label {
-            flex: 1;
-        }
-        .loading {
-            text-align: center;
-            margin-top: 20px;
-            display: none;
-        }
-        .loading::after {
-            content: "...";
-            animation: loading 1.5s infinite;
-        }
-        @keyframes loading {
-            0% { content: "."; }
-            33% { content: ".."; }
-            66% { content: "..."; }
-        }
-    </style>
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
 </head>
 <body>
     <h1>DOCX Parser</h1>
-    <form id="parser-form">
-        <input type="file" name="files[]" accept=".docx" multiple required>
-        <div id="file-list"></div>
-        <label><input type="checkbox" name="parse_doc" checked> Parse documents</label>
-        <label><input type="checkbox" name="create_summary"> Create word count summary</label>
-        <div class="number-inputs">
-            <label>Min word count: <input type="number" name="min_count" value="5"></label>
-            <label>Max word count: <input type="number" name="max_count" value="80"></label>
-        </div>
-        <div class="button-group">
-            <button type="submit">Process</button>
-            <button type="button" id="clear-button">Clear</button>
-        </div>
-    </form>
-    <div class="loading">Processing</div>
+
+    <div id="file-list"></div>
+
+    <input type="file" id="file-input" accept=".docx" multiple>
+
+    <div class="checkbox-group">
+        <input type="checkbox" id="parse-doc" checked>
+        <label for="parse-doc">Analyser dokumenter</label>
+    </div>
+
+    <div class="select-group">
+        <label for="parse-level">Analyser opp til overskriftsnivå:</label>
+        <select id="parse-level">
+            <option value="1">Overskrift 1</option>
+            <option value="2">Overskrift 2</option>
+            <option value="3">Overskrift 3</option>
+            <option value="4">Overskrift 4</option>
+        </select>
+    </div>
+
+    <div class="checkbox-group">
+        <input type="checkbox" id="create-summary" checked>
+        <label for="create-summary">Lag ordtellingssammendrag</label>
+    </div>
+
+    <div class="number-inputs">
+        <label for="min-count">Min. ordtelling:</label>
+        <input type="number" id="min-count" value="5" min="1">
+        <label for="max-count">Maks. ordtelling:</label>
+        <input type="number" id="max-count" value="80" min="1">
+    </div>
+
+    <div class="button-group">
+        <button id="process-btn">Behandle</button>
+        <button id="clear-btn">Tøm</button>
+    </div>
+
+    <div class="loading" id="loading" style="display: none;">Behandler...</div>
+
     <div id="result"></div>
 
-    <script>
-        const fileInput = document.querySelector('input[type="file"]');
-        const fileList = document.getElementById('file-list');
-        const form = document.getElementById('parser-form');
-        const resultDiv = document.getElementById('result');
-        const loadingDiv = document.querySelector('.loading');
-
-        fileInput.addEventListener('change', function(e) {
-            fileList.innerHTML = '';
-            for (let file of this.files) {
-                fileList.innerHTML += `<div>${file.name}</div>`;
-            }
-        });
-
-        form.addEventListener('submit', function(e) {
-            e.preventDefault();
-            const formData = new FormData(this);
-
-            formData.set('parse_doc', document.querySelector('input[name="parse_doc"]').checked);
-            formData.set('create_summary', document.querySelector('input[name="create_summary"]').checked);
-
-            loadingDiv.style.display = 'block';
-            resultDiv.innerHTML = '';
-
-            fetch('/upload', {
-                method: 'POST',
-                body: formData
-            })
-            .then(response => response.json())
-            .then(data => {
-                loadingDiv.style.display = 'none';
-                resultDiv.innerHTML = '<h2>Results:</h2>';
-                if (data.error) {
-                    resultDiv.innerHTML += `<p>Error: ${data.error}</p>`;
-                } else {
-                    resultDiv.innerHTML += '<p>Processed files:</p><ul>';
-                    data.results.forEach(function(result) {
-                        if (result.filename) {
-                            resultDiv.innerHTML += `<li>${result.filename}</li>`;
-                        }
-                        if (result.summary_file) {
-                            resultDiv.innerHTML += `<li>Word count summary: ${result.summary_file}</li>`;
-                        }
-                    });
-                    resultDiv.innerHTML += '</ul>';
-                    resultDiv.innerHTML += `<p><a href="/download/${data.batch_id}" target="_blank">Download all files (ZIP)</a></p>`;
-                }
-            })
-            .catch(error => {
-                loadingDiv.style.display = 'none';
-                console.error('Error:', error);
-                resultDiv.innerHTML = '<p>An error occurred. Please try again.</p>';
-            });
-        });
-
-        document.getElementById('clear-button').addEventListener('click', function() {
-            fetch('/clear', { method: 'POST' })
-                .then(response => response.json())
-                .then(data => {
-                    if (data.error) {
-                        console.error('Error:', data.error);
-                    } else {
-                        form.reset();
-                        fileList.innerHTML = '';
-                        resultDiv.innerHTML = '';
-                    }
-                })
-                .catch(error => {
-                    console.error('Error:', error);
-                });
-        });
-    </script>
+    <script src="{{ url_for('static', filename='script.js') }}"></script>
 </body>
 </html>
