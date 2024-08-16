@@ -60,8 +60,8 @@ def upload_file():
 
         parse_doc = request.form.get('parse_doc') == 'true'
         create_summary = request.form.get('create_summary') == 'true'
-        min_count = int(request.form.get('min_count', 5))
-        max_count = int(request.form.get('max_count', 80))
+        min_count = int(request.form.get('min_count', 20))
+        max_count = int(request.form.get('max_count', 100))
         parse_level = int(request.form.get('parse_level', 1))
 
         logger.info(
@@ -70,14 +70,14 @@ def upload_file():
         )
 
         results = []
-        filenames = []
+        doc_paths = []
 
         for file in files:
             if file and allowed_file(file.filename):
                 filename = secure_filename(file.filename)
                 upload_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
                 file.save(upload_path)
-                filenames.append(filename)
+                doc_paths.append(upload_path)
 
                 logger.info(f"File saved: {upload_path}")
 
@@ -91,8 +91,8 @@ def upload_file():
                 results.append(result)
 
         if create_summary:
-            logger.info("Creating word count summary")
-            summary_file, summary_message = create_word_count_summary(filenames, batch_folder, min_count, max_count)
+            logger.info(f"Creating word count summary for all documents")
+            summary_file, summary_message = create_word_count_summary(doc_paths, batch_folder, min_count, max_count)
             if summary_file:
                 summary_filename = os.path.basename(summary_file)
                 results.append({'summary_file': summary_filename})

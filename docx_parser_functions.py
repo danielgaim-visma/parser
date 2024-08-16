@@ -1,8 +1,9 @@
 import docx
-from collections import OrderedDict
+from collections import OrderedDict, Counter
 import os
 import re
 import logging
+from openpyxl import Workbook
 
 # Set up logging
 logging.basicConfig(level=logging.DEBUG)
@@ -133,20 +134,19 @@ def sanitize_filename(filename):
     return sanitized[:255]  # Limit to 255 characters
 
 
-def create_word_count_summary(filenames, output_folder, min_count, max_count):
-    logger.info(f"Creating word count summary with min_count={min_count}, max_count={max_count}")
-    word_count = {}
-    for filename in filenames:
-        file_path = os.path.join(output_folder, filename)
-        if os.path.exists(file_path):
-            try:
-                doc = docx.Document(file_path)
-                for para in doc.paragraphs:
-                    words = para.text.lower().split()
-                    for word in words:
-                        word_count[word] = word_count.get(word, 0) + 1
-            except Exception as e:
-                logger.error(f"Error processing file {file_path} for word count: {str(e)}")
+def create_word_count_summary(doc_paths, output_folder, min_count=20, max_count=100):
+    logger.info(
+        f"Creating word count summary for {len(doc_paths)} documents with min_count={min_count}, max_count={max_count}")
+    word_count = Counter()
+
+    for doc_path in doc_paths:
+        try:
+            doc = docx.Document(doc_path)
+            for para in doc.paragraphs:
+                words = para.text.lower().split()
+                word_count.update(words)
+        except Exception as e:
+            logger.error(f"Error processing file {doc_path} for word count: {str(e)}")
 
     filtered_words = {word: count for word, count in word_count.items() if min_count <= count <= max_count}
 
@@ -154,16 +154,20 @@ def create_word_count_summary(filenames, output_folder, min_count, max_count):
         min_count_found = min(word_count.values()) if word_count else 0
         max_count_found = max(word_count.values()) if word_count else 0
         logger.warning(
-            f"No words match the specified count range. Word count range in document: {min_count_found} - {max_count_found}")
-        return None, f"No words found with count between {min_count} and {max_count}. Word count range in document: {min_count_found} - {max_count_found}"
+            f"No words match the specified count range. Word count range in documents: {min_count_found} - {max_count_found}")
+        return None, f"No words found with count between {min_count} and {max_count}. Word count range in documents: {min_count_found} - {max_count_found}"
 
-    summary_filename = f"word_count_summary_{min_count}_to_{max_count}.txt"
+    summary_filename = f"word_count_summary_{min_count}_to_{max_count}.xlsx"
     summary_path = os.path.join(output_folder, summary_filename)
 
     try:
-        with open(summary_path, 'w', encoding='utf-8') as f:
-            for word, count in sorted(filtered_words.items(), key=lambda x: x[1], reverse=True):
-                f.write(f"{word}: {count}\n")
+        wb = Workbook()
+        ws = wb.active
+        ws.title = "Word Count Summary"
+        ws.append(["Word", "Count"])
+        for word, count in sorted(filtered_words.items(), key=lambda x: x[1], reverse=True):
+            ws.append([word, count])
+        wb.save(summary_path)
         logger.info(f"Word count summary saved to: {summary_path}")
     except Exception as e:
         logger.error(f"Error writing word count summary: {str(e)}")
