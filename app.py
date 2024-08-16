@@ -85,13 +85,9 @@ def upload_file():
             result = {'filename': filename}
             if parse_doc:
                 app.logger.info(f"Parsing document: {filename}")
-                parsed_content = parse_docx(upload_path)
-                parsed_filename = f"parsed_{filename}.txt"
-                parsed_file_path = os.path.join(batch_folder, parsed_filename)
-                with open(parsed_file_path, 'w', encoding='utf-8') as f:
-                    f.write(str(parsed_content))
-                result['parsed_file'] = parsed_filename
-                app.logger.info(f"Parsed file saved: {parsed_file_path}")
+                doc_folder = parse_docx(upload_path, batch_folder)
+                result['doc_folder'] = os.path.relpath(doc_folder, batch_folder)
+                app.logger.info(f"Document parsed and saved in: {doc_folder}")
 
             results.append(result)
 
