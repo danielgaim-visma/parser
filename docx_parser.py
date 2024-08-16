@@ -12,29 +12,29 @@ def parse_docx(file_path):
     print(f"Opening document: {file_path}")
     doc = docx.Document(file_path)
     content = defaultdict(lambda: defaultdict(list))
-    current_heading1 = "No Overskrift 1"
+    current_heading1 = "No Heading 1"
     current_heading2 = None
 
     print(f"Total paragraphs in document: {len(doc.paragraphs)}")
     for i, paragraph in enumerate(doc.paragraphs):
         print(f"Paragraph {i}: Style = {paragraph.style.name}, Text = {paragraph.text[:50]}...")
-        if paragraph.style.name == 'Overskrift 1':
+        if paragraph.style.name == 'Heading 1':
             current_heading1 = paragraph.text
             current_heading2 = None
-            print(f"Found Overskrift 1: {current_heading1}")
-        elif paragraph.style.name == 'Overskrift 2':
+            print(f"Found Heading 1: {current_heading1}")
+        elif paragraph.style.name == 'Heading 2':
             current_heading2 = paragraph.text
-            print(f"Found Overskrift 2: {current_heading2}")
+            print(f"Found Heading 2: {current_heading2}")
         elif current_heading2 is not None:
             content[current_heading1][current_heading2].append(paragraph.text)
-        elif current_heading1 != "No Overskrift 1":
+        elif current_heading1 != "No Heading 1":
             content[current_heading1]["_intro"].append(paragraph.text)
 
     print(f"Parsed content structure:")
     for h1, h2_content in content.items():
-        print(f"  Overskrift 1: {h1}")
+        print(f"  Heading 1: {h1}")
         for h2, paragraphs in h2_content.items():
-            print(f"    Overskrift 2: {h2}")
+            print(f"    Heading 2: {h2}")
             print(f"      Paragraphs: {len(paragraphs)}")
 
     return dict(content)
@@ -71,7 +71,7 @@ def save_parsed_content(parsed_content, output_folder, original_filename):
 
             with open(output_file, 'w', encoding='utf-8') as f:
                 if heading2 != "_intro":
-                    f.write(f"Overskrift 2: {heading2}\n\n")
+                    f.write(f"Heading 2: {heading2}\n\n")
                 for paragraph in paragraphs:
                     f.write(f"{paragraph}\n")
 
@@ -123,7 +123,7 @@ def main():
         if not parsed_content:
             print("No content found in the document. This could be because:")
             print("1. The document is empty")
-            print("2. The document doesn't use 'Overskrift 1' or 'Overskrift 2' styles")
+            print("2. The document doesn't use 'Heading 1' or 'Heading 2' styles")
             print("3. There's an issue with reading the document styles")
         else:
             output_folder = create_output_folder()
@@ -131,12 +131,12 @@ def main():
             print(f"\nParsed content has been saved to: {saved_folder}")
             print("\nContent overview:")
             for heading1, heading2_content in parsed_content.items():
-                print(f"\nOverskrift 1: {heading1}")
+                print(f"\nHeading 1: {heading1}")
                 for heading2, paragraphs in heading2_content.items():
                     if heading2 == "_intro":
                         print(f"  Introduction: {len(paragraphs)} paragraphs")
                     else:
-                        print(f"  Overskrift 2: {heading2}")
+                        print(f"  Heading 2: {heading2}")
                         print(f"    {len(paragraphs)} paragraphs")
     except Exception as e:
         print(f"An error occurred while processing the file: {e}")
