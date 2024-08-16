@@ -1,5 +1,3 @@
-# app.py
-
 from flask import Flask, render_template, request, jsonify, send_file
 import os
 import logging
@@ -94,13 +92,14 @@ def upload_file():
 
         if create_summary:
             logger.info("Creating word count summary")
-            summary_file = create_word_count_summary(filenames, batch_folder, min_count, max_count)
+            summary_file, summary_message = create_word_count_summary(filenames, batch_folder, min_count, max_count)
             if summary_file:
                 summary_filename = os.path.basename(summary_file)
                 results.append({'summary_file': summary_filename})
                 logger.info(f"Summary file saved: {summary_file}")
             else:
-                logger.warning("No word count summary created (no words matched the criteria)")
+                logger.warning(summary_message)
+            results.append({'summary_message': summary_message})
 
         logger.info(f"Processing complete. Results: {results}")
         return jsonify({'results': results, 'batch_id': batch_id})

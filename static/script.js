@@ -51,11 +51,28 @@ document.addEventListener('DOMContentLoaded', function() {
         })
         .then(data => {
             loadingDiv.style.display = 'none';
-            resultDiv.innerHTML = `
-                <h2>Behandling fullført</h2>
-                <p>Batch ID: ${data.batch_id}</p>
-                <a href="/download/${data.batch_id}" download>Last ned resultater</a>
-            `;
+            let resultHTML = '<h2>Behandling fullført</h2>';
+            resultHTML += `<p>Batch ID: ${data.batch_id}</p>`;
+
+            if (data.results) {
+                data.results.forEach(result => {
+                    if (result.filename) {
+                        resultHTML += `<p>Behandlet fil: ${result.filename}</p>`;
+                    }
+                    if (result.doc_folder) {
+                        resultHTML += `<p>Dokumentmappe: ${result.doc_folder}</p>`;
+                    }
+                    if (result.summary_file) {
+                        resultHTML += `<p>Ordtellingssammendrag: ${result.summary_file}</p>`;
+                    }
+                    if (result.summary_message) {
+                        resultHTML += `<p>Sammendragsmelding: ${result.summary_message}</p>`;
+                    }
+                });
+            }
+
+            resultHTML += `<a href="/download/${data.batch_id}" download>Last ned resultater</a>`;
+            resultDiv.innerHTML = resultHTML;
         })
         .catch(error => {
             loadingDiv.style.display = 'none';
@@ -75,9 +92,11 @@ document.addEventListener('DOMContentLoaded', function() {
         .then(response => response.json())
         .then(data => {
             console.log(data.message);
+            alert('Opplastede filer er slettet.');
         })
         .catch(error => {
             console.error('Error:', error);
+            alert('En feil oppstod under sletting av filer.');
         });
     }
 });
