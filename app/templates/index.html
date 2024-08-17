@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DOCX Parser</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
+</head>
+<body>
+    <div class="container">
+        <img src="{{ url_for('static', filename='images/docx-parser-logo.png') }}" alt="DOCX Parser Logo" class="logo">
+        <h1>DOCX Parser</h1>
+
+        <form id="upload-form">
+            <div class="upload-section">
+                <h2>Last opp dokumenter</h2>
+                <input type="file" id="file-input" name="files[]" multiple accept=".docx">
+                <ul id="file-list"></ul>
+            </div>
+
+            <div class="upload-section">
+                <h2>Last opp referansefil (valgfritt)</h2>
+                <p>Støttede formater: CSV, TXT</p>
+                <input type="file" id="reference-file-input" name="reference_file" accept=".csv,.txt">
+                <p id="reference-file-name"></p>
+            </div>
+
+            <div class="options-section">
+                <div class="option">
+                    <input type="checkbox" id="parse-doc" name="parse_doc" value="false">
+                    <label for="parse-doc">Analyser dokumenter</label>
+                </div>
+
+                <div class="option">
+                    <label for="parse-level">Analyser opp til overskriftsnivå:</label>
+                    <select id="parse-level" name="parse_level">
+                        <option value="1">Overskrift 1</option>
+                        <option value="2">Overskrift 2</option>
+                        <option value="3">Overskrift 3</option>
+                    </select>
+                </div>
+
+                <div class="option">
+                    <input type="checkbox" id="create-summary" name="create_summary" value="false">
+                    <label for="create-summary">Lag ordtellingssammendrag</label>
+                </div>
+
+                <div class="option">
+                    <label for="min-count">Min. ordtelling:</label>
+                    <input type="number" id="min-count" name="min_count" value="20">
+                </div>
+
+                <div class="option">
+                    <label for="max-count">Maks. ordtelling:</label>
+                    <input type="number" id="max-count" name="max_count" value="100">
+                </div>
+            </div>
+
+            <div class="button-group">
+                <button type="submit" id="process-btn">Behandle</button>
+                <button type="button" id="clear-btn">Tøm</button>
+            </div>
+        </form>
+
+        <div id="loading" class="loading">Behandler...</div>
+        <div id="result"></div>
+    </div>
+
+    <script src="{{ url_for('static', filename='js/script.js') }}" type="module"></script>
+</body>
+</html>
