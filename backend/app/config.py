@@ -6,3 +6,4 @@ class Config:
     RESULTS_FOLDER = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'results')
     ALLOWED_EXTENSIONS = {'docx', 'csv', 'txt'}
     MAX_CONTENT_LENGTH = 16 * 1024 * 1024  # 16 MB
+    CORS_HEADERS = 'Content-Type'

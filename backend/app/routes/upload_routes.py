@@ -1,7 +1,7 @@
 from flask import Blueprint, request, jsonify, current_app
 import os
 import logging
-from ..modules.file_handler import allowed_file, save_uploaded_file, create_batch_folder
+from ..modules.file_handler import allowed_file, save_uploaded_file, create_batch_folder, clear_upload_folder
 from ..modules.document_parser import parse_multiple_docx
 from ..modules.keyword_tagger import read_keywords
 from ..modules.word_counter import create_word_count_summary
@@ -11,24 +11,23 @@ logger = logging.getLogger(__name__)
 
 upload = Blueprint('upload', __name__)
 
-@upload.route('/upload', methods=['POST'])
+@upload.route('/api/upload', methods=['POST'])
 def upload_file():
     logger.info("Upload request received")
     try:
-        if 'files[]' not in request.files:
+        if 'files' not in request.files:
             logger.error("No file part in the request")
             return jsonify({'error': 'No file part'}), 400
 
-        files = request.files.getlist('files[]')
+        files = request.files.getlist('files')
         if not files or files[0].filename == '':
             logger.error("No selected files")
             return jsonify({'error': 'No selected files'}), 400
 
-        # Log all form data
         logger.info(f"Received form data: {request.form}")
 
-        parse_doc = request.form.get('parse_doc') == 'true'
-        create_summary = request.form.get('create_summary') == 'true'
+        parse_doc = request.form.get('parseDoc') == 'true'
+        create_summary = request.form.get('createSummary') == 'true'
 
         logger.info(f"parse_doc: {parse_doc}, create_summary: {create_summary}")
 
@@ -39,9 +38,9 @@ def upload_file():
         batch_id, batch_folder = create_batch_folder()
         logger.info(f"Created batch folder: {batch_folder}")
 
-        min_count = int(request.form.get('min_count', 20))
-        max_count = int(request.form.get('max_count', 100))
-        parse_level = int(request.form.get('parse_level', 1))
+        min_count = int(request.form.get('minCount', 20))
+        max_count = int(request.form.get('maxCount', 100))
+        parse_level = int(request.form.get('parseLevel', 1))
 
         logger.info(
             f"parse_doc: {parse_doc}, create_summary: {create_summary}, "
@@ -49,7 +48,7 @@ def upload_file():
         )
 
         keywords = []
-        reference_file = request.files.get('reference_file')
+        reference_file = request.files.get('referenceFile')
         if reference_file and reference_file.filename != '':
             reference_filename = save_uploaded_file(reference_file, batch_folder)
             if reference_filename:
@@ -87,20 +86,27 @@ def upload_file():
             results.append({'summary_message': summary_message})
 
         logger.info(f"Processing complete. Results: {results}")
-        return jsonify({'results': results, 'batch_id': batch_id})
+
+        # Prepare the response
+        processed_folders = [
+            {'name': result['output_folder'], 'zipUrl': f'/api/download/{batch_id}/{result["output_folder"]}'}
+            for result in results if 'output_folder' in result
+        ]
+
+        return jsonify({
+            'batchId': batch_id,
+            'message': 'Processing completed successfully.',
+            'processedFolders': processed_folders
+        }), 200
 
     except Exception as e:
         logger.error(f"An error occurred during file processing: {str(e)}", exc_info=True)
         return jsonify({'error': str(e)}), 500
 
-@upload.route('/clear', methods=['POST'])
+@upload.route('/api/clear', methods=['POST'])
 def clear():
     try:
-        # Clear upload folder
-        for filename in os.listdir(current_app.config['UPLOAD_FOLDER']):
-            file_path = os.path.join(current_app.config['UPLOAD_FOLDER'], filename)
-            if os.path.isfile(file_path):
-                os.unlink(file_path)
+        clear_upload_folder()
         logger.info("Upload folder cleared")
         return jsonify({'message': 'Cleared successfully'})
     except Exception as e:

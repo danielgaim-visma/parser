@@ -32,3 +32,11 @@ def create_zip_file(batch_folder):
                 zf.write(file_path, arcname)
     memory_file.seek(0)
     return memory_file
+
+def clear_upload_folder():
+    upload_folder = current_app.config['UPLOAD_FOLDER']
+    for filename in os.listdir(upload_folder):
+        file_path = os.path.join(upload_folder, filename)
+        if os.path.isfile(file_path):
+            os.unlink(file_path)
+    return True
