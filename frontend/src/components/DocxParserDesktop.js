@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Upload, FileText, Check, Folder, Download } from 'lucide-react';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 
 const DocxParserDesktop = () => {
   const [files, setFiles] = useState([]);
@@ -182,10 +183,13 @@ const DocxParserDesktop = () => {
         </div>
         {result && (
           <div className="p-6 bg-gray-100">
-            <div className="bg-green-100 border-l-4 border-green-500 text-green-700 p-4" role="alert">
-              <p className="font-bold">Success</p>
-              <p>{result.message} Batch ID: {result.batchId}</p>
-            </div>
+            <Alert>
+              <Check className="h-4 w-4" />
+              <AlertTitle>Success</AlertTitle>
+              <AlertDescription>
+                {result.message} Batch ID: {result.batchId}
+              </AlertDescription>
+            </Alert>
           </div>
         )}
         {processedFolders.length > 0 && (
