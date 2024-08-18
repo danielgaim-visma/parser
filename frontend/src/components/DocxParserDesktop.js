@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Upload, FileText, Check, Folder, Download, AlertTriangle } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from './Alert';
+
 const DocxParserDesktop = () => {
   const [files, setFiles] = useState([]);
   const [referenceFile, setReferenceFile] = useState(null);
@@ -91,8 +92,10 @@ const DocxParserDesktop = () => {
     formData.append('parseDoc', parseDoc.toString());
     formData.append('createSummary', createSummary.toString());
     formData.append('parseLevel', parseLevel);
-    formData.append('minCount', minCount);
-    formData.append('maxCount', maxCount);
+
+    // Only append minCount and maxCount if they have valid values
+    if (minCount) formData.append('minCount', minCount);
+    if (maxCount) formData.append('maxCount', maxCount);
 
     try {
       const response = await fetch('/api/upload', {

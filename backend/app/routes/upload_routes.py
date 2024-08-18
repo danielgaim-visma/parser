@@ -1,6 +1,7 @@
 from flask import Blueprint, request, jsonify, current_app
 import os
 import logging
+import zipfile
 from ..modules.file_handler import allowed_file, save_uploaded_file, create_batch_folder, clear_upload_folder
 from ..modules.document_parser import parse_multiple_docx
 from ..modules.keyword_tagger import read_keywords
@@ -10,6 +11,14 @@ logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
 
 upload = Blueprint('upload', __name__)
+
+def create_zip_file(folder_path, zip_filename):
+    with zipfile.ZipFile(zip_filename, 'w', zipfile.ZIP_DEFLATED) as zipf:
+        for root, dirs, files in os.walk(folder_path):
+            for file in files:
+                file_path = os.path.join(root, file)
+                arcname = os.path.relpath(file_path, folder_path)
+                zipf.write(file_path, arcname)
 
 @upload.route('/api/upload', methods=['POST'])
 def upload_file():
@@ -38,8 +47,9 @@ def upload_file():
         batch_id, batch_folder = create_batch_folder()
         logger.info(f"Created batch folder: {batch_folder}")
 
-        min_count = int(request.form.get('minCount', 20))
-        max_count = int(request.form.get('maxCount', 100))
+        # Use default values if minCount or maxCount are not provided or empty
+        min_count = int(request.form.get('minCount')) if request.form.get('minCount') else 20
+        max_count = int(request.form.get('maxCount')) if request.form.get('maxCount') else 100
         parse_level = int(request.form.get('parseLevel', 1))
 
         logger.info(
@@ -88,10 +98,18 @@ def upload_file():
         logger.info(f"Processing complete. Results: {results}")
 
         # Prepare the response
-        processed_folders = [
-            {'name': result['output_folder'], 'zipUrl': f'/api/download/{batch_id}/{result["output_folder"]}'}
-            for result in results if 'output_folder' in result
-        ]
+        processed_folders = []
+        for result in results:
+            if 'output_folder' in result:
+                output_folder = result['output_folder']
+                folder_name = os.path.basename(output_folder)
+                zip_filename = f"{folder_name}.zip"
+                zip_path = os.path.join(batch_folder, zip_filename)
+                create_zip_file(output_folder, zip_path)
+                processed_folders.append({
+                    'output_folder': folder_name,
+                    'zipUrl': f'/api/download/{batch_id}/{zip_filename}'
+                })
 
         return jsonify({
             'batchId': batch_id,
