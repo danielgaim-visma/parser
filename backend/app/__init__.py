@@ -76,12 +76,12 @@ def create_app(config_class=Config):
 
     @app.errorhandler(404)
     def not_found(e):
-        logger.error(f"404 error: {e}")
+        logger.error(f"404 error: {str(e)}")
         return "404 Not Found", 404
 
     @app.errorhandler(500)
     def server_error(e):
-        logger.error(f"500 error: {e}")
+        logger.error(f"500 error: {str(e)}", exc_info=True)
         return "500 Internal Server Error", 500
 
     @app.before_request
