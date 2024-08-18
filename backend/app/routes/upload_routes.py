@@ -7,20 +7,27 @@ from ..modules.document_parser import parse_multiple_docx
 from ..modules.keyword_tagger import read_keywords
 from ..modules.word_counter import create_word_count_summary
 
-logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
 
 upload = Blueprint('upload', __name__)
 
-def create_zip_file(batch_folder, output_folders, zip_filename):
-    with zipfile.ZipFile(zip_filename, 'w', zipfile.ZIP_DEFLATED) as zip:
-        for folder in output_folders:
-            folder_name = os.path.basename(folder)
-            for root, dirs, files in os.walk(folder):
-                for file in files:
-                    file_path = os.path.join(root, file)
-                    arcname = os.path.join(folder_name, os.path.relpath(file_path, folder))
-                    zip.write(file_path, arcname)
+
+def create_zip_file(batch_folder, files_to_zip, zip_filename):
+    try:
+        zip_path = os.path.join(batch_folder, zip_filename)
+        with zipfile.ZipFile(zip_path, 'w', zipfile.ZIP_DEFLATED) as zip_file:
+            for file in files_to_zip:
+                file_path = os.path.join(batch_folder, file)
+                if os.path.exists(file_path):
+                    zip_file.write(file_path, file)
+                else:
+                    logger.warning(f"File not found for zipping: {file_path}")
+        logger.info(f"Zip file created successfully: {zip_path}")
+        return zip_path
+    except Exception as e:
+        logger.error(f"Error creating zip file: {str(e)}")
+        raise
+
 
 @upload.route('/api/upload', methods=['POST'])
 def upload_file():
@@ -49,8 +56,8 @@ def upload_file():
         batch_id, batch_folder = create_batch_folder()
         logger.info(f"Created batch folder: {batch_folder}")
 
-        min_count = int(request.form.get('minCount')) if request.form.get('minCount') else 20
-        max_count = int(request.form.get('maxCount')) if request.form.get('maxCount') else 100
+        min_count = int(request.form.get('minCount', 0))
+        max_count = int(request.form.get('maxCount', 300))
         parse_level = int(request.form.get('parseLevel', 1))
 
         logger.info(
@@ -61,64 +68,85 @@ def upload_file():
         keywords = []
         reference_file = request.files.get('referenceFile')
         if reference_file and reference_file.filename != '':
-            reference_filename = save_uploaded_file(reference_file, batch_folder)
-            if reference_filename:
-                keywords = read_keywords(reference_filename)
-                logger.info(f"Read {len(keywords)} keywords from reference file")
-            else:
-                logger.warning("Invalid reference file")
-        else:
-            logger.info("No reference file provided")
+            try:
+                reference_filename = save_uploaded_file(reference_file, batch_folder)
+                if reference_filename:
+                    keywords = read_keywords(reference_filename)
+                    logger.info(f"Read {len(keywords)} keywords from reference file")
+                else:
+                    logger.warning("Invalid reference file")
+            except Exception as e:
+                logger.error(f"Error processing reference file: {str(e)}")
 
         results = []
         doc_paths = []
+        files_to_zip = []
 
         for file in files:
             if file and allowed_file(file.filename):
-                filename = save_uploaded_file(file, current_app.config['UPLOAD_FOLDER'])
-                if filename:
-                    doc_paths.append(filename)
-                    logger.info(f"File saved: {filename}")
+                try:
+                    filename = save_uploaded_file(file, current_app.config['UPLOAD_FOLDER'])
+                    if filename:
+                        doc_paths.append(filename)
+                        logger.info(f"File saved: {filename}")
+                except Exception as e:
+                    logger.error(f"Error saving file {file.filename}: {str(e)}")
 
         if parse_doc:
             logger.info(f"Parsing documents: {doc_paths}")
-            parsed_results = parse_multiple_docx(doc_paths, batch_folder, parse_level, keywords)
-            results.extend(parsed_results)
+            try:
+                parsed_results = parse_multiple_docx(doc_paths, batch_folder, parse_level, keywords)
+                results.extend(parsed_results)
+                files_to_zip.extend([result['output_file'] for result in parsed_results if 'output_file' in result])
+            except Exception as e:
+                logger.error(f"Error parsing documents: {str(e)}")
 
         if create_summary:
             logger.info(f"Creating word count summary for all documents")
-            summary_file, summary_message = create_word_count_summary(doc_paths, batch_folder, min_count, max_count)
-            if summary_file:
-                summary_filename = os.path.basename(summary_file)
-                results.append({'summary_file': summary_filename})
-                logger.info(f"Summary file saved: {summary_file}")
-            else:
-                logger.warning(summary_message)
-            results.append({'summary_message': summary_message})
+            try:
+                summary_file, summary_message = create_word_count_summary(doc_paths, batch_folder, min_count, max_count)
+                if summary_file:
+                    summary_filename = os.path.basename(summary_file)
+                    results.append({'summary_file': summary_filename})
+                    files_to_zip.append(summary_filename)
+                    logger.info(f"Summary file saved: {summary_file}")
+                else:
+                    logger.warning(summary_message)
+                results.append({'summary_message': summary_message})
+            except Exception as e:
+                logger.error(f"Error creating word count summary: {str(e)}")
 
         logger.info(f"Processing complete. Results: {results}")
 
-        # Create a single zip file for all processed folders
-        output_folders = [result['output_folder'] for result in results if 'output_folder' in result]
-        zip_filename = "processed_documents.zip"
-        zip_path = os.path.join(batch_folder, zip_filename)
-        create_zip_file(batch_folder, output_folders, zip_path)
+        # Create a single zip file for all processed files
+        if files_to_zip:
+            try:
+                zip_filename = "processed_documents.zip"
+                zip_path = create_zip_file(batch_folder, files_to_zip, zip_filename)
 
-        # Prepare the response
-        processed_folders = [{
-            'output_folder': 'All Processed Documents',
-            'zipUrl': f'/api/download/{batch_id}/{zip_filename}'
-        }]
+                # Prepare the response
+                processed_folders = [{
+                    'output_folder': 'All Processed Documents',
+                    'zipUrl': f'/api/download/{batch_id}/{zip_filename}'
+                }]
+            except Exception as e:
+                logger.error(f"Error in zip file creation: {str(e)}")
+                processed_folders = []
+        else:
+            logger.warning("No files to zip")
+            processed_folders = []
 
         return jsonify({
             'batchId': batch_id,
             'message': 'Processing completed successfully.',
-            'processedFolders': processed_folders
+            'processedFolders': processed_folders,
+            'results': results
         }), 200
 
     except Exception as e:
-        logger.error(f"An error occurred during file processing: {str(e)}", exc_info=True)
+        logger.exception(f"An unexpected error occurred during file processing: {str(e)}")
         return jsonify({'error': str(e)}), 500
+
 
 @upload.route('/api/clear', methods=['POST'])
 def clear():
