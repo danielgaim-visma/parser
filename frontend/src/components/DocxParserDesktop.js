@@ -93,7 +93,6 @@ const DocxParserDesktop = () => {
     formData.append('createSummary', createSummary.toString());
     formData.append('parseLevel', parseLevel);
 
-    // Only append minCount and maxCount if they have valid values
     if (minCount) formData.append('minCount', minCount);
     if (maxCount) formData.append('maxCount', maxCount);
 
@@ -132,7 +131,6 @@ const DocxParserDesktop = () => {
     setError(null);
     setProcessedFolders([]);
 
-    // Clear upload folder
     fetch('/api/clear', { method: 'POST' })
       .then(response => response.json())
       .then(data => console.log(data.message))
@@ -296,7 +294,7 @@ const DocxParserDesktop = () => {
         )}
         {processedFolders.length > 0 && (
           <div className="p-6 border-t">
-            <h2 className="text-xl font-semibold mb-4">Processed Folders</h2>
+            <h2 className="text-xl font-semibold mb-4">Processed Documents</h2>
             <div className="space-y-4">
               {processedFolders.map((folder, index) => (
                 <div key={index} className="flex items-center justify-between bg-gray-50 p-4 rounded-lg">
@@ -310,7 +308,7 @@ const DocxParserDesktop = () => {
                     className="flex items-center px-4 py-2 bg-green-500 text-white rounded hover:bg-green-600 transition duration-200"
                   >
                     <Download className="w-4 h-4 mr-2" />
-                    Download ZIP
+                    Download All Processed Documents
                   </a>
                 </div>
               ))}
