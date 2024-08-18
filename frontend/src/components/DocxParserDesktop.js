@@ -1,7 +1,6 @@
-import React, { useState } from 'react';
-import { Upload, FileText, Check, Folder, Download } from 'lucide-react';
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-
+import React, { useState, useRef, useEffect } from 'react';
+import { Upload, FileText, Check, Folder, Download, AlertTriangle } from 'lucide-react';
+import { Alert, AlertDescription, AlertTitle } from './Alert';
 const DocxParserDesktop = () => {
   const [files, setFiles] = useState([]);
   const [referenceFile, setReferenceFile] = useState(null);
@@ -12,46 +11,107 @@ const DocxParserDesktop = () => {
   const [maxCount, setMaxCount] = useState('');
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState(null);
+  const [error, setError] = useState(null);
   const [processedFolders, setProcessedFolders] = useState([]);
 
+  const fileInputRef = useRef(null);
+  const referenceFileInputRef = useRef(null);
+
+  useEffect(() => {
+    return () => {
+      // Clear upload folder when component unmounts
+      fetch('/api/clear', { method: 'POST' })
+        .then(response => response.json())
+        .then(data => console.log(data.message))
+        .catch(error => console.error('Error clearing upload folder:', error));
+    };
+  }, []);
+
   const handleFileChange = (e) => {
-    setFiles(Array.from(e.target.files));
+    const selectedFiles = Array.from(e.target.files);
+    const validFiles = selectedFiles.filter(file => file.name.endsWith('.docx'));
+    setFiles(validFiles);
+    if (validFiles.length !== selectedFiles.length) {
+      setError('Some files were not added. Only .docx files are allowed.');
+    } else {
+      setError(null);
+    }
   };
 
   const handleReferenceFileChange = (e) => {
-    setReferenceFile(e.target.files[0]);
+    const file = e.target.files[0];
+    if (file && (file.name.endsWith('.csv') || file.name.endsWith('.txt'))) {
+      setReferenceFile(file);
+      setError(null);
+    } else {
+      setReferenceFile(null);
+      setError('Invalid reference file. Only .csv or .txt files are allowed.');
+    }
+  };
+
+  const handleFileDrop = (e) => {
+    e.preventDefault();
+    const droppedFiles = Array.from(e.dataTransfer.files);
+    const validFiles = droppedFiles.filter(file => file.name.endsWith('.docx'));
+    setFiles(prevFiles => [...prevFiles, ...validFiles]);
+    if (validFiles.length !== droppedFiles.length) {
+      setError('Some files were not added. Only .docx files are allowed.');
+    } else {
+      setError(null);
+    }
+  };
+
+  const handleReferenceFileDrop = (e) => {
+    e.preventDefault();
+    const file = e.dataTransfer.files[0];
+    if (file && (file.name.endsWith('.csv') || file.name.endsWith('.txt'))) {
+      setReferenceFile(file);
+      setError(null);
+    } else {
+      setError('Invalid reference file. Only .csv or .txt files are allowed.');
+    }
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (files.length === 0) {
+      setError('Please select at least one DOCX file to process.');
+      return;
+    }
+    if (!parseDoc && !createSummary) {
+      setError('Please select at least one operation (Parse Documents or Create Summary).');
+      return;
+    }
     setLoading(true);
+    setError(null);
 
     const formData = new FormData();
     files.forEach((file) => formData.append('files', file));
-    if (referenceFile) formData.append('reference_file', referenceFile);
-    formData.append('parse_doc', parseDoc);
-    formData.append('create_summary', createSummary);
-    formData.append('parse_level', parseLevel);
-    formData.append('min_count', minCount);
-    formData.append('max_count', maxCount);
+    if (referenceFile) formData.append('referenceFile', referenceFile);
+    formData.append('parseDoc', parseDoc.toString());
+    formData.append('createSummary', createSummary.toString());
+    formData.append('parseLevel', parseLevel);
+    formData.append('minCount', minCount);
+    formData.append('maxCount', maxCount);
 
     try {
-      const response = await fetch('/api/process', {
+      const response = await fetch('/api/upload', {
         method: 'POST',
         body: formData,
       });
       const data = await response.json();
-      setResult({
-        batchId: data.batchId,
-        message: data.message,
-      });
-      setProcessedFolders(data.processedFolders);
+      if (response.ok) {
+        setResult({
+          batchId: data.batchId,
+          message: data.message,
+        });
+        setProcessedFolders(data.processedFolders);
+      } else {
+        throw new Error(data.error || 'An error occurred during processing.');
+      }
     } catch (error) {
       console.error('Error:', error);
-      setResult({
-        batchId: null,
-        message: 'An error occurred during processing.',
-      });
+      setError(error.message);
     } finally {
       setLoading(false);
     }
@@ -66,7 +126,14 @@ const DocxParserDesktop = () => {
     setMinCount('');
     setMaxCount('');
     setResult(null);
+    setError(null);
     setProcessedFolders([]);
+
+    // Clear upload folder
+    fetch('/api/clear', { method: 'POST' })
+      .then(response => response.json())
+      .then(data => console.log(data.message))
+      .catch(error => console.error('Error clearing upload folder:', error));
   };
 
   return (
@@ -80,10 +147,22 @@ const DocxParserDesktop = () => {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
                 <h2 className="text-xl font-semibold mb-4">Upload Documents</h2>
-                <div className="border-2 border-dashed border-gray-300 rounded-lg p-4 flex flex-col items-center justify-center h-32">
+                <div
+                  className="border-2 border-dashed border-gray-300 rounded-lg p-4 flex flex-col items-center justify-center h-32 cursor-pointer"
+                  onClick={() => fileInputRef.current.click()}
+                  onDrop={handleFileDrop}
+                  onDragOver={(e) => e.preventDefault()}
+                >
                   <Upload className="w-12 h-12 text-gray-400 mb-2" />
                   <span className="text-sm text-gray-500">Choose files or drag here</span>
-                  <input type="file" className="hidden" multiple onChange={handleFileChange} />
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    className="hidden"
+                    multiple
+                    onChange={handleFileChange}
+                    accept=".docx"
+                  />
                 </div>
                 {files.length > 0 && (
                   <ul className="mt-2 text-sm text-gray-600">
@@ -98,10 +177,21 @@ const DocxParserDesktop = () => {
               </div>
               <div>
                 <h2 className="text-xl font-semibold mb-4">Reference File (Optional)</h2>
-                <div className="border-2 border-dashed border-gray-300 rounded-lg p-4 flex flex-col items-center justify-center h-32">
+                <div
+                  className="border-2 border-dashed border-gray-300 rounded-lg p-4 flex flex-col items-center justify-center h-32 cursor-pointer"
+                  onClick={() => referenceFileInputRef.current.click()}
+                  onDrop={handleReferenceFileDrop}
+                  onDragOver={(e) => e.preventDefault()}
+                >
                   <Upload className="w-12 h-12 text-gray-400 mb-2" />
                   <span className="text-sm text-gray-500">Choose CSV or TXT file</span>
-                  <input type="file" className="hidden" onChange={handleReferenceFileChange} accept=".csv,.txt" />
+                  <input
+                    ref={referenceFileInputRef}
+                    type="file"
+                    className="hidden"
+                    onChange={handleReferenceFileChange}
+                    accept=".csv,.txt"
+                  />
                 </div>
                 {referenceFile && (
                   <p className="mt-2 text-sm text-gray-600">
@@ -181,6 +271,15 @@ const DocxParserDesktop = () => {
             </div>
           </form>
         </div>
+        {error && (
+          <div className="p-6 bg-red-100">
+            <Alert variant="destructive">
+              <AlertTriangle className="h-4 w-4" />
+              <AlertTitle>Error</AlertTitle>
+              <AlertDescription>{error}</AlertDescription>
+            </Alert>
+          </div>
+        )}
         {result && (
           <div className="p-6 bg-gray-100">
             <Alert>
@@ -200,7 +299,7 @@ const DocxParserDesktop = () => {
                 <div key={index} className="flex items-center justify-between bg-gray-50 p-4 rounded-lg">
                   <div className="flex items-center">
                     <Folder className="w-6 h-6 text-blue-500 mr-3" />
-                    <span className="text-lg">{folder.name}</span>
+                    <span className="text-lg">{folder.output_folder}</span>
                   </div>
                   <a
                     href={folder.zipUrl}

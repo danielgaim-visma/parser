@@ -4,13 +4,17 @@ from werkzeug.utils import secure_filename
 
 download = Blueprint('download', __name__)
 
+
 @download.route('/api/download/<path:filename>', methods=['GET'])
 def download_file(filename):
     # Secure the filename to prevent directory traversal attacks
     filename = secure_filename(filename)
 
+    # Extract the batch_id from the filename
+    batch_id = filename.split('_')[0]
+
     # Construct the full path to the file
-    file_path = os.path.join(current_app.config['RESULTS_FOLDER'], filename)
+    file_path = os.path.join(current_app.config['RESULTS_FOLDER'], batch_id, filename)
 
     # Check if the file exists
     if os.path.exists(file_path) and os.path.isfile(file_path):
