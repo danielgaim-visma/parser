@@ -1,30 +1,21 @@
 import os
+import sys
 import logging
-from logging.handlers import RotatingFileHandler
-from flask import send_from_directory
 from app import create_app
 from app.config import Config
 
 # Create and configure the app
-app = create_app()
-
-# Ensure the instance folder exists
-try:
-    os.makedirs(app.instance_path)
-except OSError:
-    pass
+app = create_app(Config)
 
 # Configure logging
 if not app.debug:
-    # Set up the log file handler
-    if not os.path.exists('logs'):
-        os.mkdir('logs')
-    file_handler = RotatingFileHandler('logs/webdoc_parser.log', maxBytes=10240, backupCount=10)
-    file_handler.setFormatter(logging.Formatter(
+    # Set up the stream handler
+    stream_handler = logging.StreamHandler(sys.stdout)
+    stream_handler.setFormatter(logging.Formatter(
         '%(asctime)s %(levelname)s: %(message)s [in %(pathname)s:%(lineno)d]'
     ))
-    file_handler.setLevel(logging.INFO)
-    app.logger.addHandler(file_handler)
+    stream_handler.setLevel(logging.INFO)
+    app.logger.addHandler(stream_handler)
 
     # Set the app logger level
     app.logger.setLevel(logging.INFO)

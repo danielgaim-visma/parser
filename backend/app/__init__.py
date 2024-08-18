@@ -4,7 +4,7 @@ import os
 import logging
 from .config import Config
 
-logging.basicConfig(level=logging.DEBUG)
+logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 def create_app(config_class=Config):
@@ -86,7 +86,8 @@ def create_app(config_class=Config):
 
     @app.before_request
     def log_request_info():
-        logger.debug('Headers: %s', request.headers)
-        logger.debug('Body: %s', request.get_data())
+        logger.info(f"Request: {request.method} {request.url}")
+        logger.debug(f"Headers: {request.headers}")
+        logger.debug(f"Body: {request.get_data()}")
 
     return app
