@@ -1,4 +1,4 @@
-from flask import Flask, send_from_directory, jsonify
+from flask import Flask, send_from_directory, jsonify, request
 from flask_cors import CORS
 import os
 import logging
@@ -8,8 +8,9 @@ logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
 
 def create_app(config_class=Config):
-    app = Flask(__name__, static_folder=os.path.abspath('../../frontend/build'), static_url_path='')
-    logger.info(f"Static folder path: {os.path.abspath(app.static_folder)}")
+    static_folder = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', 'frontend', 'build'))
+    app = Flask(__name__, static_folder=static_folder, static_url_path='')
+    logger.info(f"Static folder path: {static_folder}")
 
     CORS(app)
     app.config.from_object(config_class)
