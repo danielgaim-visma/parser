@@ -1,323 +1,128 @@
-import React, { useState, useRef, useEffect } from 'react';
-import { Upload, FileText, Check, Folder, Download, AlertTriangle } from 'lucide-react';
-import { Alert, AlertDescription, AlertTitle } from './Alert';
+import os
+import re
+from docx import Document
+from collections import OrderedDict
+import logging
+from .keyword_tagger import tag_document
+from concurrent.futures import ThreadPoolExecutor, as_completed
 
-const DocxParserDesktop = () => {
-  const [files, setFiles] = useState([]);
-  const [referenceFile, setReferenceFile] = useState(null);
-  const [parseDoc, setParseDoc] = useState(false);
-  const [createSummary, setCreateSummary] = useState(false);
-  const [parseLevel, setParseLevel] = useState('1');
-  const [minCount, setMinCount] = useState('');
-  const [maxCount, setMaxCount] = useState('');
-  const [loading, setLoading] = useState(false);
-  const [result, setResult] = useState(null);
-  const [error, setError] = useState(null);
-  const [processedFolders, setProcessedFolders] = useState([]);
+logging.basicConfig(level=logging.DEBUG)
+logger = logging.getLogger(__name__)
 
-  const fileInputRef = useRef(null);
-  const referenceFileInputRef = useRef(null);
+def parse_multiple_docx(file_paths, output_folder, parse_level, keywords):
+    results = []
+    with ThreadPoolExecutor() as executor:
+        future_to_file = {executor.submit(parse_docx, file_path, output_folder, parse_level, keywords): file_path for file_path in file_paths}
+        for future in as_completed(future_to_file):
+            file_path = future_to_file[future]
+            try:
+                doc_folder = future.result()
+                results.append({"file": os.path.basename(file_path), "output_folder": doc_folder})
+            except Exception as exc:
+                logger.error(f'{file_path} generated an exception: {exc}')
+                results.append({"file": os.path.basename(file_path), "error": str(exc)})
+    return results
 
-  useEffect(() => {
-    return () => {
-      // Clear upload folder when component unmounts
-      fetch('/api/clear', { method: 'POST' })
-        .then(response => response.json())
-        .then(data => console.log(data.message))
-        .catch(error => console.error('Error clearing upload folder:', error));
-    };
-  }, []);
+def parse_docx(file_path, output_folder, parse_level, keywords):
+    logger.info(f"Parsing document: {file_path}")
+    try:
+        doc = Document(file_path)
+    except Exception as e:
+        logger.error(f"Error opening document {file_path}: {str(e)}")
+        raise
 
-  const handleFileChange = (e) => {
-    const selectedFiles = Array.from(e.target.files);
-    const validFiles = selectedFiles.filter(file => file.name.endsWith('.docx'));
-    setFiles(validFiles);
-    if (validFiles.length !== selectedFiles.length) {
-      setError('Some files were not added. Only .docx files are allowed.');
-    } else {
-      setError(null);
-    }
-  };
+    content = OrderedDict()
+    current_headings = [''] * parse_level
+    current_content = []
 
-  const handleReferenceFileChange = (e) => {
-    const file = e.target.files[0];
-    if (file && (file.name.endsWith('.csv') || file.name.endsWith('.txt'))) {
-      setReferenceFile(file);
-      setError(null);
-    } else {
-      setReferenceFile(null);
-      setError('Invalid reference file. Only .csv or .txt files are allowed.');
-    }
-  };
+    def save_current_content():
+        if any(current_headings):
+            current_dict = content
+            for level, heading in enumerate(current_headings):
+                if heading:
+                    if heading not in current_dict:
+                        current_dict[heading] = OrderedDict()
+                    if level == parse_level - 1:
+                        if current_content:
+                            current_dict[heading] = current_content.copy()
+                        break
+                    current_dict = current_dict[heading]
+            current_content.clear()
 
-  const handleFileDrop = (e) => {
-    e.preventDefault();
-    const droppedFiles = Array.from(e.dataTransfer.files);
-    const validFiles = droppedFiles.filter(file => file.name.endsWith('.docx'));
-    setFiles(prevFiles => [...prevFiles, ...validFiles]);
-    if (validFiles.length !== droppedFiles.length) {
-      setError('Some files were not added. Only .docx files are allowed.');
-    } else {
-      setError(null);
-    }
-  };
+    for paragraph in doc.paragraphs:
+        heading_level = get_heading_level(paragraph)
 
-  const handleReferenceFileDrop = (e) => {
-    e.preventDefault();
-    const file = e.dataTransfer.files[0];
-    if (file && (file.name.endsWith('.csv') || file.name.endsWith('.txt'))) {
-      setReferenceFile(file);
-      setError(null);
-    } else {
-      setError('Invalid reference file. Only .csv or .txt files are allowed.');
-    }
-  };
+        if heading_level is not None and heading_level <= parse_level:
+            save_current_content()
+            current_headings[heading_level - 1] = paragraph.text.strip()
+            for i in range(heading_level, parse_level):
+                current_headings[i] = ''
+        else:
+            if paragraph.text.strip():
+                current_content.append(paragraph)
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    if (files.length === 0) {
-      setError('Please select at least one DOCX file to process.');
-      return;
-    }
-    if (!parseDoc && !createSummary) {
-      setError('Please select at least one operation (Parse Documents or Create Summary).');
-      return;
-    }
-    setLoading(true);
-    setError(null);
+    save_current_content()
 
-    const formData = new FormData();
-    files.forEach((file) => formData.append('files', file));
-    if (referenceFile) formData.append('referenceFile', referenceFile);
-    formData.append('parseDoc', parseDoc.toString());
-    formData.append('createSummary', createSummary.toString());
-    formData.append('parseLevel', parseLevel);
+    # Create main folder for the document
+    doc_title = os.path.splitext(os.path.basename(file_path))[0]
+    doc_folder = os.path.join(output_folder, sanitize_filename(doc_title))
+    os.makedirs(doc_folder, exist_ok=True)
 
-    if (minCount) formData.append('minCount', minCount);
-    if (maxCount) formData.append('maxCount', maxCount);
+    # Write content to DOCX files
+    write_content_to_files(content, doc_folder, parse_level, keywords)
 
-    try {
-      const response = await fetch('/api/upload', {
-        method: 'POST',
-        body: formData,
-      });
-      const data = await response.json();
-      if (response.ok) {
-        setResult({
-          batchId: data.batchId,
-          message: data.message,
-        });
-        setProcessedFolders(data.processedFolders);
-      } else {
-        throw new Error(data.error || 'An error occurred during processing.');
-      }
-    } catch (error) {
-      console.error('Error:', error);
-      setError(error.message);
-    } finally {
-      setLoading(false);
-    }
-  };
+    logger.info(f"Parsing complete. Output folder: {doc_folder}")
+    return doc_folder
 
-  const handleClear = () => {
-    setFiles([]);
-    setReferenceFile(null);
-    setParseDoc(false);
-    setCreateSummary(false);
-    setParseLevel('1');
-    setMinCount('');
-    setMaxCount('');
-    setResult(null);
-    setError(null);
-    setProcessedFolders([]);
+def write_content_to_files(content, folder, parse_level, keywords, parent_path=''):
+    for heading, subcontent in content.items():
+        current_path = os.path.join(parent_path, sanitize_filename(heading))
+        current_folder = os.path.join(folder, current_path)
 
-    fetch('/api/clear', { method: 'POST' })
-      .then(response => response.json())
-      .then(data => console.log(data.message))
-      .catch(error => console.error('Error clearing upload folder:', error));
-  };
+        if isinstance(subcontent, OrderedDict):
+            os.makedirs(current_folder, exist_ok=True)
+            write_content_to_files(subcontent, folder, parse_level - 1, keywords, current_path)
+        elif subcontent:  # Only create a file if there's content
+            os.makedirs(os.path.dirname(current_folder), exist_ok=True)
+            file_name = f"{sanitize_filename(heading)}.docx"
+            full_path = os.path.join(folder, f"{current_path}.docx")
+            save_docx(full_path, heading, subcontent, parse_level)
+            if keywords:
+                tag_document(full_path, keywords)
+            logger.info(f"Saved parsed content to: {full_path}")
 
-  return (
-    <div className="min-h-screen bg-gray-100 p-8">
-      <div className="max-w-4xl mx-auto bg-white rounded-lg shadow-lg overflow-hidden">
-        <div className="bg-blue-600 p-6 text-white">
-          <h1 className="text-3xl font-bold">DOCX Parser</h1>
-        </div>
-        <div className="p-6">
-          <form onSubmit={handleSubmit} className="space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div>
-                <h2 className="text-xl font-semibold mb-4">Upload Documents</h2>
-                <div
-                  className="border-2 border-dashed border-gray-300 rounded-lg p-4 flex flex-col items-center justify-center h-32 cursor-pointer"
-                  onClick={() => fileInputRef.current.click()}
-                  onDrop={handleFileDrop}
-                  onDragOver={(e) => e.preventDefault()}
-                >
-                  <Upload className="w-12 h-12 text-gray-400 mb-2" />
-                  <span className="text-sm text-gray-500">Choose files or drag here</span>
-                  <input
-                    ref={fileInputRef}
-                    type="file"
-                    className="hidden"
-                    multiple
-                    onChange={handleFileChange}
-                    accept=".docx"
-                  />
-                </div>
-                {files.length > 0 && (
-                  <ul className="mt-2 text-sm text-gray-600">
-                    {files.map((file, index) => (
-                      <li key={index} className="flex items-center">
-                        <FileText className="w-4 h-4 mr-2" />
-                        {file.name}
-                      </li>
-                    ))}
-                  </ul>
-                )}
-              </div>
-              <div>
-                <h2 className="text-xl font-semibold mb-4">Reference File (Optional)</h2>
-                <div
-                  className="border-2 border-dashed border-gray-300 rounded-lg p-4 flex flex-col items-center justify-center h-32 cursor-pointer"
-                  onClick={() => referenceFileInputRef.current.click()}
-                  onDrop={handleReferenceFileDrop}
-                  onDragOver={(e) => e.preventDefault()}
-                >
-                  <Upload className="w-12 h-12 text-gray-400 mb-2" />
-                  <span className="text-sm text-gray-500">Choose CSV or TXT file</span>
-                  <input
-                    ref={referenceFileInputRef}
-                    type="file"
-                    className="hidden"
-                    onChange={handleReferenceFileChange}
-                    accept=".csv,.txt"
-                  />
-                </div>
-                {referenceFile && (
-                  <p className="mt-2 text-sm text-gray-600">
-                    <FileText className="inline w-4 h-4 mr-2" />
-                    {referenceFile.name}
-                  </p>
-                )}
-              </div>
-            </div>
-            <div>
-              <h2 className="text-xl font-semibold mb-4">Options</h2>
-              <div className="space-y-2">
-                <label className="flex items-center">
-                  <input
-                    type="checkbox"
-                    className="form-checkbox h-5 w-5 text-blue-600"
-                    checked={parseDoc}
-                    onChange={(e) => setParseDoc(e.target.checked)}
-                  />
-                  <span className="ml-2">Parse Documents</span>
-                </label>
-                {parseDoc && (
-                  <select
-                    className="mt-2 w-full p-2 border rounded"
-                    value={parseLevel}
-                    onChange={(e) => setParseLevel(e.target.value)}
-                  >
-                    <option value="1">Heading 1</option>
-                    <option value="2">Heading 2</option>
-                    <option value="3">Heading 3</option>
-                  </select>
-                )}
-                <label className="flex items-center">
-                  <input
-                    type="checkbox"
-                    className="form-checkbox h-5 w-5 text-blue-600"
-                    checked={createSummary}
-                    onChange={(e) => setCreateSummary(e.target.checked)}
-                  />
-                  <span className="ml-2">Create Word Count Summary</span>
-                </label>
-                {createSummary && (
-                  <div className="grid grid-cols-2 gap-2 mt-2">
-                    <input
-                      type="number"
-                      placeholder="Min count"
-                      className="p-2 border rounded"
-                      value={minCount}
-                      onChange={(e) => setMinCount(e.target.value)}
-                    />
-                    <input
-                      type="number"
-                      placeholder="Max count"
-                      className="p-2 border rounded"
-                      value={maxCount}
-                      onChange={(e) => setMaxCount(e.target.value)}
-                    />
-                  </div>
-                )}
-              </div>
-            </div>
-            <div className="flex justify-between">
-              <button
-                type="submit"
-                className="px-6 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition duration-200"
-                disabled={loading}
-              >
-                {loading ? 'Processing...' : 'Process'}
-              </button>
-              <button
-                type="button"
-                onClick={handleClear}
-                className="px-6 py-2 bg-red-600 text-white rounded hover:bg-red-700 transition duration-200"
-              >
-                Clear
-              </button>
-            </div>
-          </form>
-        </div>
-        {error && (
-          <div className="p-6 bg-red-100">
-            <Alert variant="destructive">
-              <AlertTriangle className="h-4 w-4" />
-              <AlertTitle>Error</AlertTitle>
-              <AlertDescription>{error}</AlertDescription>
-            </Alert>
-          </div>
-        )}
-        {result && (
-          <div className="p-6 bg-gray-100">
-            <Alert>
-              <Check className="h-4 w-4" />
-              <AlertTitle>Success</AlertTitle>
-              <AlertDescription>
-                {result.message} Batch ID: {result.batchId}
-              </AlertDescription>
-            </Alert>
-          </div>
-        )}
-        {processedFolders.length > 0 && (
-          <div className="p-6 border-t">
-            <h2 className="text-xl font-semibold mb-4">Processed Documents</h2>
-            <div className="space-y-4">
-              {processedFolders.map((folder, index) => (
-                <div key={index} className="flex items-center justify-between bg-gray-50 p-4 rounded-lg">
-                  <div className="flex items-center">
-                    <Folder className="w-6 h-6 text-blue-500 mr-3" />
-                    <span className="text-lg">{folder.output_folder}</span>
-                  </div>
-                  <a
-                    href={folder.zipUrl}
-                    download
-                    className="flex items-center px-4 py-2 bg-green-500 text-white rounded hover:bg-green-600 transition duration-200"
-                  >
-                    <Download className="w-4 h-4 mr-2" />
-                    Download All Processed Documents
-                  </a>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-      </div>
-    </div>
-  );
-};
+def save_docx(full_path, heading, content, parse_level):
+    try:
+        doc = Document()
+        doc.add_heading(heading, level=parse_level)
+        add_paragraphs(doc, content)
+        doc.save(full_path)
+    except Exception as e:
+        logger.error(f"Error saving document {full_path}: {str(e)}")
 
-export default DocxParserDesktop;
+def add_paragraphs(doc, paragraphs):
+    for para in paragraphs:
+        new_para = doc.add_paragraph()
+        new_para.style = para.style
+        new_para.text = para.text
+        # Copy runs to preserve formatting
+        new_para.runs.clear()
+        for run in para.runs:
+            new_run = new_para.add_run(run.text)
+            new_run.bold = run.bold
+            new_run.italic = run.italic
+            new_run.underline = run.underline
+            # Add more formatting attributes as needed
+
+def get_heading_level(paragraph):
+    if paragraph.style.name.startswith('Heading'):
+        try:
+            return int(paragraph.style.name.split()[-1])
+        except ValueError:
+            logger.warning(f"Invalid heading style: {paragraph.style.name}")
+    return None
+
+def sanitize_filename(filename):
+    # Remove invalid characters and limit length
+    sanitized = re.sub(r'[^\w\-_\. ]', '_', filename)
+    return sanitized[:255]  # Limit to 255 characters

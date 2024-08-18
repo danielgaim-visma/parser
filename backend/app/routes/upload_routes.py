@@ -13,14 +13,14 @@ logger = logging.getLogger(__name__)
 upload = Blueprint('upload', __name__)
 
 def create_zip_file(batch_folder, output_folders, zip_filename):
-    with zipfile.ZipFile(zip_filename, 'w', zipfile.ZIP_DEFLATED) as zipf:
+    with zipfile.ZipFile(zip_filename, 'w', zipfile.ZIP_DEFLATED) as zip:
         for folder in output_folders:
             folder_name = os.path.basename(folder)
             for root, dirs, files in os.walk(folder):
                 for file in files:
                     file_path = os.path.join(root, file)
                     arcname = os.path.join(folder_name, os.path.relpath(file_path, folder))
-                    zipf.write(file_path, arcname)
+                    zip.write(file_path, arcname)
 
 @upload.route('/api/upload', methods=['POST'])
 def upload_file():
