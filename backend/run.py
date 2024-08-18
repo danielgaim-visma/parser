@@ -2,7 +2,7 @@ import os
 import logging
 from logging.handlers import RotatingFileHandler
 from app import create_app
-from config import Config
+from app.config import Config
 
 # Create and configure the app
 app = create_app()
