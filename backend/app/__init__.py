@@ -7,9 +7,8 @@ from .config import Config
 logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
 
-
 def create_app(config_class=Config):
-    app = Flask(__name__, static_folder='../../frontend/build', static_url_path='')
+    app = Flask(__name__, static_folder=os.path.abspath('../../frontend/build'), static_url_path='')
     logger.info(f"Static folder path: {os.path.abspath(app.static_folder)}")
 
     CORS(app)
@@ -67,20 +66,12 @@ def create_app(config_class=Config):
             logger.info("API route detected")
             return "Not Found", 404  # Let the API handle its routes
 
-        full_path = os.path.join(app.static_folder, path)
-        logger.info(f"Full path: {full_path}")
-
-        if path != "" and os.path.exists(full_path):
+        if path != "" and os.path.exists(os.path.join(app.static_folder, path)):
             logger.info(f"Serving file: {path}")
             return send_from_directory(app.static_folder, path)
 
-        index_path = os.path.join(app.static_folder, 'index.html')
-        if os.path.exists(index_path):
-            logger.info("Serving index.html")
-            return send_from_directory(app.static_folder, 'index.html')
-        else:
-            logger.error(f"index.html not found at {index_path}")
-            return "React app not built or not found", 404
+        logger.info("Serving index.html")
+        return send_from_directory(app.static_folder, 'index.html')
 
     @app.errorhandler(404)
     def not_found(e):
@@ -91,5 +82,10 @@ def create_app(config_class=Config):
     def server_error(e):
         logger.error(f"500 error: {e}")
         return "500 Internal Server Error", 500
+
+    @app.before_request
+    def log_request_info():
+        logger.debug('Headers: %s', request.headers)
+        logger.debug('Body: %s', request.get_data())
 
     return app
