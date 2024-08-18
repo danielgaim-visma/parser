@@ -1,3 +1,6 @@
+# Ignore only node_modules in frontend
 /frontend/node_modules
-/frontend/src
-/frontend/public
+
+# Do not ignore src and public folders
+# /frontend/src
+# /frontend/public
