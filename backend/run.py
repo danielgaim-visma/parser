@@ -29,12 +29,5 @@ if not app.debug:
     app.logger.setLevel(logging.INFO)
     app.logger.info('WebDoc Parser startup')
 
-# Import and register blueprints
-from app.routes.upload_routes import upload as upload_bp
-app.register_blueprint(upload_bp)
-
-from app.routes.download_routes import download as download_bp
-app.register_blueprint(download_bp)
-
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5001, debug=Config.DEBUG)
