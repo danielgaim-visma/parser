@@ -1,33 +1,14 @@
 from flask import Blueprint, request, jsonify, current_app
 import os
 import logging
-import zipfile
-from ..modules.file_handler import allowed_file, save_uploaded_file, create_batch_folder, clear_upload_folder
+from ..modules.file_handler import allowed_file, save_uploaded_file, create_batch_folder, clear_upload_folder, create_zip_file
 from ..modules.document_parser import parse_multiple_docx
-from ..modules.keyword_tagger import read_keywords
+from ..modules.keyword_tagger import read_keywords, tag_multiple_documents
 from ..modules.word_counter import create_word_count_summary
 
 logger = logging.getLogger(__name__)
 
 upload = Blueprint('upload', __name__)
-
-
-def create_zip_file(batch_folder, files_to_zip, zip_filename):
-    try:
-        zip_path = os.path.join(batch_folder, zip_filename)
-        with zipfile.ZipFile(zip_path, 'w', zipfile.ZIP_DEFLATED) as zip_file:
-            for file in files_to_zip:
-                file_path = os.path.join(batch_folder, file)
-                if os.path.exists(file_path):
-                    zip_file.write(file_path, file)
-                else:
-                    logger.warning(f"File not found for zipping: {file_path}")
-        logger.info(f"Zip file created successfully: {zip_path}")
-        return zip_path
-    except Exception as e:
-        logger.error(f"Error creating zip file: {str(e)}")
-        raise
-
 
 @upload.route('/api/upload', methods=['POST'])
 def upload_file():
@@ -46,12 +27,13 @@ def upload_file():
 
         parse_doc = request.form.get('parseDoc') == 'true'
         create_summary = request.form.get('createSummary') == 'true'
+        keyword_tag = request.form.get('keywordTag') == 'true'
 
-        logger.info(f"parse_doc: {parse_doc}, create_summary: {create_summary}")
+        logger.info(f"parse_doc: {parse_doc}, create_summary: {create_summary}, keyword_tag: {keyword_tag}")
 
-        if not parse_doc and not create_summary:
+        if not parse_doc and not create_summary and not keyword_tag:
             logger.error("No operation selected")
-            return jsonify({'error': 'Please select at least one operation (Parse Documents or Create Summary)'}), 400
+            return jsonify({'error': 'Please select at least one operation (Parse Documents, Create Summary, or Keyword Tag)'}), 400
 
         batch_id, batch_folder = create_batch_folder()
         logger.info(f"Created batch folder: {batch_folder}")
@@ -61,7 +43,7 @@ def upload_file():
         parse_level = int(request.form.get('parseLevel', 1))
 
         logger.info(
-            f"parse_doc: {parse_doc}, create_summary: {create_summary}, "
+            f"parse_doc: {parse_doc}, create_summary: {create_summary}, keyword_tag: {keyword_tag}, "
             f"min_count: {min_count}, max_count: {max_count}, parse_level: {parse_level}"
         )
 
@@ -77,6 +59,7 @@ def upload_file():
                     logger.warning("Invalid reference file")
             except Exception as e:
                 logger.error(f"Error processing reference file: {str(e)}")
+                return jsonify({'error': f"Error processing reference file: {str(e)}"}), 400
 
         results = []
         doc_paths = []
@@ -91,15 +74,18 @@ def upload_file():
                         logger.info(f"File saved: {filename}")
                 except Exception as e:
                     logger.error(f"Error saving file {file.filename}: {str(e)}")
+                    return jsonify({'error': f"Error saving file {file.filename}: {str(e)}"}), 500
 
         if parse_doc:
             logger.info(f"Parsing documents: {doc_paths}")
             try:
-                parsed_results = parse_multiple_docx(doc_paths, batch_folder, parse_level, keywords)
+                parsed_results = parse_multiple_docx(doc_paths, batch_folder, parse_level, keywords if keyword_tag else None)
                 results.extend(parsed_results)
                 files_to_zip.extend([result['output_file'] for result in parsed_results if 'output_file' in result])
+                logger.info(f"Parsed {len(parsed_results)} documents")
             except Exception as e:
                 logger.error(f"Error parsing documents: {str(e)}")
+                return jsonify({'error': f"Error parsing documents: {str(e)}"}), 500
 
         if create_summary:
             logger.info(f"Creating word count summary for all documents")
@@ -115,6 +101,18 @@ def upload_file():
                 results.append({'summary_message': summary_message})
             except Exception as e:
                 logger.error(f"Error creating word count summary: {str(e)}")
+                return jsonify({'error': f"Error creating word count summary: {str(e)}"}), 500
+
+        if keyword_tag:
+            logger.info(f"Tagging documents with keywords: {doc_paths}")
+            try:
+                tagged_results = tag_multiple_documents(doc_paths, batch_folder, keywords)
+                results.extend(tagged_results)
+                files_to_zip.extend([result['output_file'] for result in tagged_results if 'output_file' in result])
+                logger.info(f"Tagged {len(tagged_results)} documents")
+            except Exception as e:
+                logger.error(f"Error tagging documents with keywords: {str(e)}")
+                return jsonify({'error': f"Error tagging documents with keywords: {str(e)}"}), 500
 
         logger.info(f"Processing complete. Results: {results}")
 
@@ -129,9 +127,10 @@ def upload_file():
                     'output_folder': 'All Processed Documents',
                     'zipUrl': f'/api/download/{batch_id}/{zip_filename}'
                 }]
+                logger.info(f"Zip file created: {zip_path}")
             except Exception as e:
                 logger.error(f"Error in zip file creation: {str(e)}")
-                processed_folders = []
+                return jsonify({'error': f"Error in zip file creation: {str(e)}"}), 500
         else:
             logger.warning("No files to zip")
             processed_folders = []
@@ -146,7 +145,6 @@ def upload_file():
     except Exception as e:
         logger.exception(f"An unexpected error occurred during file processing: {str(e)}")
         return jsonify({'error': str(e)}), 500
-
 
 @upload.route('/api/clear', methods=['POST'])
 def clear():
