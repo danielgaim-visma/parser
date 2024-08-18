@@ -24,7 +24,7 @@ const DocxParserDesktop = () => {
       fetch('/api/clear', { method: 'POST' })
         .then(response => response.json())
         .then(data => console.log(data.message))
-        .catch(error => console.error('Feil ved tømming av opplastingsmappe:', error));
+        .catch(error => console.error('Error clearing upload folder:', error));
     };
   }, []);
 
@@ -33,7 +33,7 @@ const DocxParserDesktop = () => {
     const validFiles = selectedFiles.filter(file => file.name.endsWith('.docx'));
     setFiles(validFiles);
     if (validFiles.length !== selectedFiles.length) {
-      setError('Noen filer ble ikke lagt til. Kun .docx-filer er tillatt.');
+      setError('Some files were not added. Only .docx files are allowed.');
     } else {
       setError(null);
     }
@@ -46,7 +46,7 @@ const DocxParserDesktop = () => {
       setError(null);
     } else {
       setReferenceFile(null);
-      setError('Ugyldig referansefil. Kun .csv- eller .txt-filer er tillatt.');
+      setError('Invalid reference file. Only .csv or .txt files are allowed.');
     }
   };
 
@@ -56,7 +56,7 @@ const DocxParserDesktop = () => {
     const validFiles = droppedFiles.filter(file => file.name.endsWith('.docx'));
     setFiles(prevFiles => [...prevFiles, ...validFiles]);
     if (validFiles.length !== droppedFiles.length) {
-      setError('Noen filer ble ikke lagt til. Kun .docx-filer er tillatt.');
+      setError('Some files were not added. Only .docx files are allowed.');
     } else {
       setError(null);
     }
@@ -69,18 +69,18 @@ const DocxParserDesktop = () => {
       setReferenceFile(file);
       setError(null);
     } else {
-      setError('Ugyldig referansefil. Kun .csv- eller .txt-filer er tillatt.');
+      setError('Invalid reference file. Only .csv or .txt files are allowed.');
     }
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (files.length === 0) {
-      setError('Vennligst velg minst én DOCX-fil å behandle.');
+      setError('Please select at least one DOCX file to process.');
       return;
     }
     if (!parseDoc && !createSummary && !keywordTag) {
-      setError('Vennligst velg minst én operasjon (Analyser dokumenter, Lag sammendrag eller Nøkkelordmerking).');
+      setError('Please select at least one operation (Parse Documents, Create Summary, or Keyword Tag).');
       return;
     }
     setLoading(true);
@@ -110,10 +110,10 @@ const DocxParserDesktop = () => {
         });
         setProcessedFolders(data.processedFolders);
       } else {
-        throw new Error(data.error || 'Det oppstod en feil under behandlingen.');
+        throw new Error(data.error || 'An error occurred during processing.');
       }
     } catch (error) {
-      console.error('Feil:', error);
+      console.error('Error:', error);
       setError(error.message);
     } finally {
       setLoading(false);
@@ -136,20 +136,20 @@ const DocxParserDesktop = () => {
     fetch('/api/clear', { method: 'POST' })
       .then(response => response.json())
       .then(data => console.log(data.message))
-      .catch(error => console.error('Feil ved tømming av opplastingsmappe:', error));
+      .catch(error => console.error('Error clearing upload folder:', error));
   };
 
   return (
     <div className="min-h-screen bg-gray-100 p-8">
       <div className="max-w-4xl mx-auto bg-white rounded-lg shadow-lg overflow-hidden">
         <div className="bg-blue-600 p-6 text-white">
-          <h1 className="text-3xl font-bold">DOCX-parser</h1>
+          <h1 className="text-3xl font-bold">DOCX Parser</h1>
         </div>
         <div className="p-6">
           <form onSubmit={handleSubmit} className="space-y-6">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
-                <h2 className="text-xl font-semibold mb-4">Last opp dokumenter</h2>
+                <h2 className="text-xl font-semibold mb-4">Upload Documents</h2>
                 <div
                   className="border-2 border-dashed border-gray-300 rounded-lg p-4 flex flex-col items-center justify-center h-32 cursor-pointer"
                   onClick={() => fileInputRef.current.click()}
@@ -157,7 +157,7 @@ const DocxParserDesktop = () => {
                   onDragOver={(e) => e.preventDefault()}
                 >
                   <Upload className="w-12 h-12 text-gray-400 mb-2" />
-                  <span className="text-sm text-gray-500">Velg filer eller dra hit</span>
+                  <span className="text-sm text-gray-500">Choose files or drag here</span>
                   <input
                     ref={fileInputRef}
                     type="file"
@@ -179,7 +179,7 @@ const DocxParserDesktop = () => {
                 )}
               </div>
               <div>
-                <h2 className="text-xl font-semibold mb-4">Referansefil (Valgfritt)</h2>
+                <h2 className="text-xl font-semibold mb-4">Reference File (Optional)</h2>
                 <div
                   className="border-2 border-dashed border-gray-300 rounded-lg p-4 flex flex-col items-center justify-center h-32 cursor-pointer"
                   onClick={() => referenceFileInputRef.current.click()}
@@ -187,7 +187,7 @@ const DocxParserDesktop = () => {
                   onDragOver={(e) => e.preventDefault()}
                 >
                   <Upload className="w-12 h-12 text-gray-400 mb-2" />
-                  <span className="text-sm text-gray-500">Velg CSV- eller TXT-fil</span>
+                  <span className="text-sm text-gray-500">Choose CSV or TXT file</span>
                   <input
                     ref={referenceFileInputRef}
                     type="file"
@@ -205,7 +205,7 @@ const DocxParserDesktop = () => {
               </div>
             </div>
             <div>
-              <h2 className="text-xl font-semibold mb-4">Alternativer</h2>
+              <h2 className="text-xl font-semibold mb-4">Options</h2>
               <div className="space-y-2">
                 <label className="flex items-center">
                   <input
@@ -214,7 +214,7 @@ const DocxParserDesktop = () => {
                     checked={parseDoc}
                     onChange={(e) => setParseDoc(e.target.checked)}
                   />
-                  <span className="ml-2">Analyser dokumenter</span>
+                  <span className="ml-2">Parse Documents</span>
                 </label>
                 {parseDoc && (
                   <select
@@ -222,9 +222,9 @@ const DocxParserDesktop = () => {
                     value={parseLevel}
                     onChange={(e) => setParseLevel(e.target.value)}
                   >
-                    <option value="1">Overskrift 1</option>
-                    <option value="2">Overskrift 2</option>
-                    <option value="3">Overskrift 3</option>
+                    <option value="1">Heading 1</option>
+                    <option value="2">Heading 2</option>
+                    <option value="3">Heading 3</option>
                   </select>
                 )}
                 <label className="flex items-center">
@@ -234,20 +234,20 @@ const DocxParserDesktop = () => {
                     checked={createSummary}
                     onChange={(e) => setCreateSummary(e.target.checked)}
                   />
-                  <span className="ml-2">Lag ordtellingssammendrag</span>
+                  <span className="ml-2">Create Word Count Summary</span>
                 </label>
                 {createSummary && (
                   <div className="grid grid-cols-2 gap-2 mt-2">
                     <input
                       type="number"
-                      placeholder="Min antall"
+                      placeholder="Min count"
                       className="p-2 border rounded"
                       value={minCount}
                       onChange={(e) => setMinCount(e.target.value)}
                     />
                     <input
                       type="number"
-                      placeholder="Maks antall"
+                      placeholder="Max count"
                       className="p-2 border rounded"
                       value={maxCount}
                       onChange={(e) => setMaxCount(e.target.value)}
@@ -261,7 +261,7 @@ const DocxParserDesktop = () => {
                     checked={keywordTag}
                     onChange={(e) => setKeywordTag(e.target.checked)}
                   />
-                  <span className="ml-2">Nøkkelordmerking</span>
+                  <span className="ml-2">Keyword Tag</span>
                 </label>
               </div>
             </div>
@@ -271,14 +271,14 @@ const DocxParserDesktop = () => {
                 className="px-6 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition duration-200"
                 disabled={loading}
               >
-                {loading ? 'Behandler...' : 'Behandle'}
+                {loading ? 'Processing...' : 'Process'}
               </button>
               <button
                 type="button"
                 onClick={handleClear}
                 className="px-6 py-2 bg-red-600 text-white rounded hover:bg-red-700 transition duration-200"
               >
-                Tøm
+                Clear
               </button>
             </div>
           </form>
@@ -287,7 +287,7 @@ const DocxParserDesktop = () => {
           <div className="p-6 bg-red-100">
             <Alert variant="destructive">
               <AlertTriangle className="h-4 w-4" />
-              <AlertTitle>Feil</AlertTitle>
+              <AlertTitle>Error</AlertTitle>
               <AlertDescription>{error}</AlertDescription>
             </Alert>
           </div>
@@ -296,16 +296,16 @@ const DocxParserDesktop = () => {
           <div className="p-6 bg-gray-100">
             <Alert>
               <Check className="h-4 w-4" />
-              <AlertTitle>Suksess</AlertTitle>
+              <AlertTitle>Success</AlertTitle>
               <AlertDescription>
-                {result.message} Batch-ID: {result.batchId}
+                {result.message} Batch ID: {result.batchId}
               </AlertDescription>
             </Alert>
           </div>
         )}
         {processedFolders.length > 0 && (
           <div className="p-6 border-t">
-            <h2 className="text-xl font-semibold mb-4">Behandlede dokumenter</h2>
+            <h2 className="text-xl font-semibold mb-4">Processed Documents</h2>
             <div className="space-y-4">
               {processedFolders.map((folder, index) => (
                 <div key={index} className="flex items-center justify-between bg-gray-50 p-4 rounded-lg">
@@ -319,7 +319,7 @@ const DocxParserDesktop = () => {
                     className="flex items-center px-4 py-2 bg-green-500 text-white rounded hover:bg-green-600 transition duration-200"
                   >
                     <Download className="w-4 h-4 mr-2" />
-                    Last ned alle behandlede dokumenter
+                    Download All Processed Documents
                   </a>
                 </div>
               ))}

@@ -33,7 +33,7 @@ end
 # Unset irrelevant variables.
 deactivate nondestructive
 
-set -gx VIRTUAL_ENV "/Users/daniel.gaimvisma.com/PycharmProjects/WebDoc-parser/venv"
+set -gx VIRTUAL_ENV "/Users/daniel.gaimvisma.com/PycharmProjects/docxwebparser/venv"
 
 set -gx _OLD_VIRTUAL_PATH $PATH
 set -gx PATH "$VIRTUAL_ENV/bin" $PATH

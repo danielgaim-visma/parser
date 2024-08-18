@@ -1,7 +1,8 @@
 from flask import Blueprint, request, jsonify, current_app
 import os
 import logging
-from ..modules.file_handler import allowed_file, save_uploaded_file, create_batch_folder, clear_upload_folder, create_zip_file
+import traceback
+from ..modules.file_handler import allowed_file, save_uploaded_file, create_batch_folder, clear_upload_folder, create_zip_file, get_file_size, check_disk_space
 from ..modules.document_parser import parse_multiple_docx
 from ..modules.keyword_tagger import read_keywords, tag_multiple_documents
 from ..modules.word_counter import create_word_count_summary
@@ -38,6 +39,11 @@ def upload_file():
         batch_id, batch_folder = create_batch_folder()
         logger.info(f"Created batch folder: {batch_folder}")
 
+        # Check available disk space
+        free_space = check_disk_space(batch_folder)
+        if free_space is not None and free_space < 1000000000:  # Less than 1GB
+            logger.warning(f"Low disk space. Only {free_space} bytes available.")
+
         min_count = int(request.form.get('minCount', 0))
         max_count = int(request.form.get('maxCount', 300))
         parse_level = int(request.form.get('parseLevel', 1))
@@ -59,6 +65,7 @@ def upload_file():
                     logger.warning("Invalid reference file")
             except Exception as e:
                 logger.error(f"Error processing reference file: {str(e)}")
+                logger.error(traceback.format_exc())
                 return jsonify({'error': f"Error processing reference file: {str(e)}"}), 400
 
         results = []
@@ -71,9 +78,11 @@ def upload_file():
                     filename = save_uploaded_file(file, current_app.config['UPLOAD_FOLDER'])
                     if filename:
                         doc_paths.append(filename)
-                        logger.info(f"File saved: {filename}")
+                        file_size = get_file_size(filename)
+                        logger.info(f"File saved: {filename}, Size: {file_size} bytes")
                 except Exception as e:
                     logger.error(f"Error saving file {file.filename}: {str(e)}")
+                    logger.error(traceback.format_exc())
                     return jsonify({'error': f"Error saving file {file.filename}: {str(e)}"}), 500
 
         if parse_doc:
@@ -81,10 +90,16 @@ def upload_file():
             try:
                 parsed_results = parse_multiple_docx(doc_paths, batch_folder, parse_level, keywords if keyword_tag else None)
                 results.extend(parsed_results)
-                files_to_zip.extend([result['output_file'] for result in parsed_results if 'output_file' in result])
-                logger.info(f"Parsed {len(parsed_results)} documents")
+                for result in parsed_results:
+                    if 'output_folder' in result:
+                        for root, dirs, files in os.walk(result['output_folder']):
+                            for file in files:
+                                relative_path = os.path.relpath(os.path.join(root, file), batch_folder)
+                                files_to_zip.append(relative_path)
+                logger.info(f"Added {len(files_to_zip)} files to zip list from parsing")
             except Exception as e:
                 logger.error(f"Error parsing documents: {str(e)}")
+                logger.error(traceback.format_exc())
                 return jsonify({'error': f"Error parsing documents: {str(e)}"}), 500
 
         if create_summary:
@@ -101,6 +116,7 @@ def upload_file():
                 results.append({'summary_message': summary_message})
             except Exception as e:
                 logger.error(f"Error creating word count summary: {str(e)}")
+                logger.error(traceback.format_exc())
                 return jsonify({'error': f"Error creating word count summary: {str(e)}"}), 500
 
         if keyword_tag:
@@ -112,24 +128,27 @@ def upload_file():
                 logger.info(f"Tagged {len(tagged_results)} documents")
             except Exception as e:
                 logger.error(f"Error tagging documents with keywords: {str(e)}")
+                logger.error(traceback.format_exc())
                 return jsonify({'error': f"Error tagging documents with keywords: {str(e)}"}), 500
 
         logger.info(f"Processing complete. Results: {results}")
+        logger.info(f"Files to zip: {files_to_zip}")
 
-        # Create a single zip file for all processed files
         if files_to_zip:
             try:
                 zip_filename = "processed_documents.zip"
+                logger.info(f"Creating zip file: {zip_filename}")
                 zip_path = create_zip_file(batch_folder, files_to_zip, zip_filename)
+                zip_size = get_file_size(zip_path)
+                logger.info(f"Zip file created: {zip_path}, Size: {zip_size} bytes")
 
-                # Prepare the response
                 processed_folders = [{
                     'output_folder': 'All Processed Documents',
                     'zipUrl': f'/api/download/{batch_id}/{zip_filename}'
                 }]
-                logger.info(f"Zip file created: {zip_path}")
             except Exception as e:
                 logger.error(f"Error in zip file creation: {str(e)}")
+                logger.error(traceback.format_exc())
                 return jsonify({'error': f"Error in zip file creation: {str(e)}"}), 500
         else:
             logger.warning("No files to zip")
@@ -144,14 +163,20 @@ def upload_file():
 
     except Exception as e:
         logger.exception(f"An unexpected error occurred during file processing: {str(e)}")
+        logger.error(traceback.format_exc())
         return jsonify({'error': str(e)}), 500
 
 @upload.route('/api/clear', methods=['POST'])
 def clear():
     try:
-        clear_upload_folder()
-        logger.info("Upload folder cleared")
-        return jsonify({'message': 'Cleared successfully'})
+        success = clear_upload_folder()
+        if success:
+            logger.info("Upload folder cleared successfully")
+            return jsonify({'message': 'Cleared successfully'})
+        else:
+            logger.error("Failed to clear upload folder")
+            return jsonify({'error': 'Failed to clear upload folder'}), 500
     except Exception as e:
-        logger.error(f"Error clearing upload folder: {str(e)}", exc_info=True)
+        logger.error(f"Error clearing upload folder: {str(e)}")
+        logger.error(traceback.format_exc())
         return jsonify({'error': str(e)}), 500
